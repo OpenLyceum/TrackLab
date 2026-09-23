@@ -57,7 +57,7 @@ Data flows Model → View through AXON `Property` objects. `KinematicsComputer` 
 - **OpenCV off the main thread.** Template matching runs in a Web Worker; `TrackingModel.initTracker`
   uses a monotonic `initVersion` to discard stale async results after `resetTracker()`.
 - **Wall-clock timers (documented exceptions).** Webcam init, FPS sampling, and source-switch debounce
-  use `setTimeout`/`setInterval` — real hardware timing, not sim clock (see `CLAUDE.md`).
+  use `setTimeout`/`setInterval` — real hardware timing, not sim clock (see `AGENTS.md`).
 
 ## Model / view design
 
