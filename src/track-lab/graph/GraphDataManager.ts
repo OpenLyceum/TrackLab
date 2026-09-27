@@ -19,7 +19,7 @@ export interface GridVisualizationConfig {
   yTickLabelSet: TickLabelSet;
 }
 
-export default class GraphDataManager {
+export class GraphDataManager {
   /** Upper bound on ticks per axis; spacing escalates until the count fits. */
   private static readonly MAX_TICKS = 20;
 

@@ -14,12 +14,12 @@ import type { BooleanProperty, TReadOnlyProperty } from "scenerystack/axon";
 import type { ChartRectangle, ChartTransform, TickLabelSet } from "scenerystack/bamboo";
 import type { Node, Rectangle } from "scenerystack/scenery";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import AxisGestureHandler from "./AxisGestureHandler.js";
-import type GraphDataManager from "./GraphDataManager.js";
-import HeaderDragHandler from "./HeaderDragHandler.js";
-import PanGestureHandler from "./PanGestureHandler.js";
-import ResizeGestureHandler from "./ResizeGestureHandler.js";
-import ZoomGestureHandler from "./ZoomGestureHandler.js";
+import { AxisGestureHandler } from "./AxisGestureHandler.js";
+import type { GraphDataManager } from "./GraphDataManager.js";
+import { HeaderDragHandler } from "./HeaderDragHandler.js";
+import { PanGestureHandler } from "./PanGestureHandler.js";
+import { ResizeGestureHandler } from "./ResizeGestureHandler.js";
+import { ZoomGestureHandler } from "./ZoomGestureHandler.js";
 
 /**
  * Configuration for the chart and its data management
@@ -68,7 +68,7 @@ export interface GraphDimensions {
  *
  * Call `initialize()` once after construction to attach all input listeners.
  */
-export default class GraphInteractionHandler {
+export class GraphInteractionHandler {
   private readonly zoomHandler: ZoomGestureHandler;
   private readonly panHandler: PanGestureHandler;
   private readonly axisHandler: AxisGestureHandler;

@@ -14,7 +14,7 @@ import { StringManager } from "../../i18n/StringManager.js";
 import type { TrackLabPreferencesModel } from "../../preferences/TrackLabPreferencesModel.js";
 import TrackLabColors, { getTrackColor } from "../../TrackLabColors.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import ConfigurableGraph from "../graph/ConfigurableGraph.js";
+import { ConfigurableGraph } from "../graph/ConfigurableGraph.js";
 import { buildKinematicsPlottableGroups } from "../graph/kinematics-plottable-properties.js";
 import type { PlottableProperty } from "../graph/PlottableProperty.js";
 import type { OverlayToolsModel } from "../model/OverlayToolsModel.js";

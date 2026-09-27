@@ -11,10 +11,10 @@ import { Range, Vector2 } from "scenerystack/dot";
 import type { Pointer } from "scenerystack/scenery";
 import { GRAPH_ZOOM_FACTOR } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import type GraphDataManager from "./GraphDataManager.js";
+import type { GraphDataManager } from "./GraphDataManager.js";
 import type { ChartConfig, GraphDimensions } from "./GraphInteractionHandler.js";
 
-export default class ZoomGestureHandler {
+export class ZoomGestureHandler {
   private readonly chartTransform: ChartTransform;
   private readonly chartRectangle: ChartRectangle;
   private readonly dataManager: GraphDataManager;

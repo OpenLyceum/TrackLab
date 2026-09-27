@@ -30,7 +30,7 @@ import type { GraphDimensions } from "./GraphInteractionHandler.js";
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
 
-export default class ResizeGestureHandler {
+export class ResizeGestureHandler {
   private readonly graphNode: Node;
   private readonly isResizingProperty: BooleanProperty;
   private readonly onResize: (width: number, height: number) => void;

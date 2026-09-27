@@ -24,7 +24,7 @@ import { PhetFont } from "scenerystack/scenery-phet";
 import { StringManager } from "../../i18n/StringManager.js";
 import TrackLabColors from "../../TrackLabColors.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import GraphDataManager, { type GridVisualizationConfig } from "./GraphDataManager.js";
+import { GraphDataManager, type GridVisualizationConfig } from "./GraphDataManager.js";
 import type { PlottableProperty } from "./PlottableProperty.js";
 
 // ── Styling constants (kept local — only GraphRenderer uses them) ─────────────
@@ -62,7 +62,7 @@ export function formatAxisLabel(property: PlottableProperty): string {
   return unit ? `${name} (${unit})` : name;
 }
 
-export default class GraphRenderer {
+export class GraphRenderer {
   /** Top-level container — add this to the scene graph. */
   public readonly contentNode: Node;
 

@@ -59,10 +59,10 @@ import { Range } from "scenerystack/dot";
 import { Node } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import GraphControlsPanel from "./GraphControlsPanel.js";
-import GraphDataManager from "./GraphDataManager.js";
-import GraphInteractionHandler from "./GraphInteractionHandler.js";
-import GraphRenderer from "./GraphRenderer.js";
+import { GraphControlsPanel } from "./GraphControlsPanel.js";
+import { GraphDataManager } from "./GraphDataManager.js";
+import { GraphInteractionHandler } from "./GraphInteractionHandler.js";
+import { GraphRenderer } from "./GraphRenderer.js";
 import { isRecordPlottable, type PlottableProperty } from "./PlottableProperty.js";
 
 // Line-plot stroke width — only ConfigurableGraph creates LinePlots
@@ -89,7 +89,7 @@ function mapDataPoints(
   return result;
 }
 
-export default class ConfigurableGraph extends Node {
+export class ConfigurableGraph extends Node {
   private readonly xPropertyProperty: Property<PlottableProperty>;
   private readonly yPropertyProperty: Property<PlottableProperty>;
   private readonly graphVisibleProperty: BooleanProperty;

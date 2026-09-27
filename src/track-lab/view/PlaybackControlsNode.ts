@@ -20,7 +20,7 @@ const a11yStrings = StringManager.getInstance().getA11y();
 
 import { makeEraserIcon, makeRestoreIcon } from "../../TrackLabIcons.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import GraphDataManager from "../graph/GraphDataManager.js";
+import { GraphDataManager } from "../graph/GraphDataManager.js";
 import type { TrackingModel } from "../model/TrackingModel.js";
 import type { VideoPlaybackModel } from "../model/VideoPlaybackModel.js";
 

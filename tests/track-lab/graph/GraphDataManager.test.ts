@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import GraphDataManager from "../../../src/track-lab/graph/GraphDataManager.js";
+import { GraphDataManager } from "../../../src/track-lab/graph/GraphDataManager.js";
 
 /** True for values of the form (1|2|5) x 10^k, the "nice number" sequence. */
 function isNiceNumber(value: number): boolean {

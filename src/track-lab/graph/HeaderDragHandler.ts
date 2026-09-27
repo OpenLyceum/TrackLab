@@ -19,7 +19,7 @@ export interface HeaderDragElements {
   dragTargetNode?: Node | undefined;
 }
 
-export default class HeaderDragHandler {
+export class HeaderDragHandler {
   private readonly headerBar: Rectangle;
   private readonly dragTargetNode: Node;
   private readonly isDraggingProperty: BooleanProperty;

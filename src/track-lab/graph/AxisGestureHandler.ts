@@ -19,7 +19,7 @@ import { Range, Vector2 } from "scenerystack/dot";
 import { type Pointer, type Rectangle, RichDragListener } from "scenerystack/scenery";
 import { GRAPH_PAN_SHIFT_DRAG_SPEED, GRAPH_ZOOM_FACTOR, OVERLAY_DRAG_SPEED } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import type GraphDataManager from "./GraphDataManager.js";
+import type { GraphDataManager } from "./GraphDataManager.js";
 import type { ChartConfig, GraphDimensions } from "./GraphInteractionHandler.js";
 
 /**
@@ -30,7 +30,7 @@ export interface AxisInteractionRegions {
   yAxisInteractionRegion: Rectangle;
 }
 
-export default class AxisGestureHandler {
+export class AxisGestureHandler {
   private readonly chartTransform: ChartTransform;
   private readonly chartRectangle: ChartRectangle;
   private readonly dataManager: GraphDataManager;
