@@ -3,6 +3,7 @@ import type { ServerResponse } from "node:http";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { description, name } from "./package.json";
 
 /** Handles a Range request and writes the partial response. Returns false if the header is malformed. */
 function serveRangedFile(
@@ -168,6 +169,22 @@ const securityHeaders: Record<string, string> = {
   "X-Frame-Options": "DENY",
 };
 
+/**
+ * Fill `%SIM_DESCRIPTION%` in index.html from package.json, so the page meta tags,
+ * the PWA manifest and package.json can never disagree. Runs before Vite's own
+ * `%ENV%` replacement (order: "pre").
+ */
+function simMetadataHtml(): Plugin {
+  const escaped = description.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return {
+    name: "sim-metadata-html",
+    transformIndexHtml: {
+      order: "pre",
+      handler: (html: string): string => html.replaceAll("%SIM_DESCRIPTION%", escaped),
+    },
+  };
+}
+
 /** Workbox precache ceiling — SceneryStack bundles exceed the default 2 MB limit. */
 const WORKBOX_MAX_FILE_BYTES = 12 * 1024 * 1024;
 
@@ -188,17 +205,18 @@ export default defineConfig({
     headers: securityHeaders,
   },
   plugins: [
+    simMetadataHtml(),
     serveVideos(),
     serveOpenCV(),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "icons/apple-touch-icon.png"],
       manifest: {
-        id: "track-lab",
+        id: name,
         name: "trackLab",
         // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
         short_name: "trackLab",
-        description: "trackLab simulation",
+        description,
         categories: ["education", "science"],
         // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
         theme_color: "#1a1a2e",
