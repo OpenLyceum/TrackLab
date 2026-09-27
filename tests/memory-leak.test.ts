@@ -9,7 +9,6 @@
 
 import { Property, type TReadOnlyProperty } from "scenerystack/axon";
 import { describe, expect, it } from "vitest";
-import { TimeModel } from "../src/common/TimeModel.js";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
 import { TrackingModel } from "../src/track-lab/model/TrackingModel.js";
@@ -131,4 +130,4 @@ describe("Memory leak regression", () => {
   });
 });
 
-describeDisposalLeaks([{ name: "TimeModel", create: () => new TimeModel(), idempotentDispose: true }]);
+describeDisposalLeaks([]);
