@@ -54,6 +54,7 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 - **Domain clock:** `VideoPlaybackModel` drives video timing/scrubbing instead of composing fleet-standard `TimeModel` (`src/common/TimeModel.ts` is present for shared reference only).
 - **Vite plugins / PWA:** `serveVideos` + `serveOpenCV` are extra Vite plugins (ranged `/videos/` and OpenCV WASM). Workbox `globIgnores: ["opencv.js"]` plus `runtimeCaching` keep the ~11 MB OpenCV payload off the precache. There is no `inlineSingleFile` / `--mode single` wiring — OpenCV WASM and video files cannot collapse into a self-contained HTML file. `npm run icons` prefixes `generate-svg-icon` so `icon.svg` is regenerated from the bouncing-ball script.
 - **Permissions-Policy / CSP:** camera and microphone are allowed (`self`) for video capture; `connect-src` includes `data:` because `@techstark/opencv-js` loads WASM as a base64 data URI.
+- **Template drift (Baton `check-template-drift.sh`):** `build:single` is omitted (no single-file mode, see above); `icons` runs `generate-svg-icon` first; `videos/` at the repo root holds the sample clips served by `serveVideos`.
 
 
 ### `package.json` overrides
@@ -107,7 +108,7 @@ npm test
 npm run generate-svg-icon   # bouncing-ball icon SVG
 ```
 
-`npm run release` intentionally skips `npm test` in some sims — append `&& npm test` before the version bump so a release cannot ship a failing suite.
+`npm run release` runs `npm test` before the version bump, and `src/init.ts` reads `version` from `package.json`, so the About dialog always matches the release.
 
 ## Conventions & deliberate deviations
 
