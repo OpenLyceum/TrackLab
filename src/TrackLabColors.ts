@@ -13,17 +13,6 @@ const BLACK = new Color(0, 0, 0);
 const WHITE = new Color(255, 255, 255);
 
 // ── ProfileColorProperty factory ──────────────────────────────────────────
-function profileColor(
-  name: string,
-  defaultColor: Color | string,
-  projectorColor: Color | string,
-): ProfileColorProperty {
-  return new ProfileColorProperty(TrackLabNamespace, name, {
-    default: defaultColor,
-    projector: projectorColor,
-  });
-}
-
 // ── Track colour palette (one CSS color per symbol A–Z) ─────────────────────
 // 26 distinct, high-contrast colours so every possible track has a unique hue.
 export const TRACK_COLORS = [
@@ -65,287 +54,377 @@ export function getTrackColor(colorIndex: number): Color {
  */
 const TrackLabColors = {
   // Background
-  backgroundColorProperty: profileColor("backgroundColor", BLACK, WHITE),
+  backgroundColorProperty: new ProfileColorProperty(TrackLabNamespace, "backgroundColor", {
+    default: BLACK,
+    projector: WHITE,
+  }),
 
   // Video element background (HTML style.background)
-  videoBackgroundColorProperty: profileColor("videoBackground", BLACK, new Color(30, 30, 30)),
+  videoBackgroundColorProperty: new ProfileColorProperty(TrackLabNamespace, "videoBackground", {
+    default: BLACK,
+    projector: new Color(30, 30, 30),
+  }),
 
   // Panels (ControlPanel, CalibrationToolNode midpoint, TrackListPanel, DataTableNode)
   // Dark panels on dark background (default) and light panels on light background (projector)
-  panelFillProperty: profileColor(
-    "panelFill",
-    new Color(25, 25, 45, 0.95), // Darker, more opaque for better contrast with white text
-    new Color(245, 245, 250, 0.98), // Light panel for projector mode with black text
-  ),
+  panelFillProperty: new ProfileColorProperty(TrackLabNamespace, "panelFill", {
+    default: new Color(25, 25, 45, 0.95),
+    projector: new Color(245, 245, 250, 0.98),
+  }), // Darker, more opaque for better contrast with white text; Light panel for projector mode with black text
   // Webcam panel overlay (more opaque)
-  webcamPanelFillProperty: profileColor(
-    "webcamPanelFill",
-    new Color(25, 25, 45, 0.98), // More opaque for webcam panel
-    new Color(245, 245, 250, 0.99), // More opaque light panel for projector
-  ),
-  panelStrokeProperty: profileColor(
-    "panelStroke",
-    new Color(120, 120, 140), // Lighter stroke for better contrast on dark panel
-    new Color(180, 180, 200), // Darker stroke for better contrast on light panel
-  ),
-  panelStrokeLightProperty: profileColor(
-    "panelStrokeLight",
-    new Color(150, 150, 170), // Lighter stroke for better visibility
-    new Color(160, 160, 180), // Darker stroke for light panel
-  ),
+  webcamPanelFillProperty: new ProfileColorProperty(TrackLabNamespace, "webcamPanelFill", {
+    default: new Color(25, 25, 45, 0.98),
+    projector: new Color(245, 245, 250, 0.99),
+  }), // More opaque for webcam panel; More opaque light panel for projector
+  panelStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "panelStroke", {
+    default: new Color(120, 120, 140),
+    projector: new Color(180, 180, 200),
+  }), // Lighter stroke for better contrast on dark panel; Darker stroke for better contrast on light panel
+  panelStrokeLightProperty: new ProfileColorProperty(TrackLabNamespace, "panelStrokeLight", {
+    default: new Color(150, 150, 170),
+    projector: new Color(160, 160, 180),
+  }), // Lighter stroke for better visibility; Darker stroke for light panel
 
   // Axes (X red, Y green)
-  axisXColorProperty: profileColor("axisX", new Color(255, 68, 68, 0.85), new Color(238, 51, 51, 0.85)),
-  axisYColorProperty: profileColor("axisY", new Color(68, 204, 68, 0.85), new Color(51, 187, 51, 0.85)),
+  axisXColorProperty: new ProfileColorProperty(TrackLabNamespace, "axisX", {
+    default: new Color(255, 68, 68, 0.85),
+    projector: new Color(238, 51, 51, 0.85),
+  }),
+  axisYColorProperty: new ProfileColorProperty(TrackLabNamespace, "axisY", {
+    default: new Color(68, 204, 68, 0.85),
+    projector: new Color(51, 187, 51, 0.85),
+  }),
 
   // Calibration tool (bright colors with shadows for visibility on all backgrounds)
-  calibrationFillProperty: profileColor(
-    "calibrationFill",
-    new Color(0, 255, 255, 0.3), // Bright cyan - semi-transparent for positioning
-    new Color(255, 0, 255, 0.3), // Bright magenta - semi-transparent for positioning
-  ),
-  calibrationStrokeProperty: profileColor(
-    "calibrationStroke",
-    new Color(0, 255, 255), // Bright cyan
-    new Color(255, 0, 255), // Bright magenta
-  ),
+  calibrationFillProperty: new ProfileColorProperty(TrackLabNamespace, "calibrationFill", {
+    default: new Color(0, 255, 255, 0.3),
+    projector: new Color(255, 0, 255, 0.3),
+  }), // Bright cyan - semi-transparent for positioning; Bright magenta - semi-transparent for positioning
+  calibrationStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "calibrationStroke", {
+    default: new Color(0, 255, 255),
+    projector: new Color(255, 0, 255),
+  }), // Bright cyan; Bright magenta
   // Shadow stroke for maximum contrast on all backgrounds
-  calibrationShadowStrokeProperty: profileColor(
-    "calibrationShadowStroke",
-    new Color(0, 0, 0, 0.9), // Dark shadow
-    new Color(0, 0, 0, 0.9), // Dark shadow
-  ),
-  calibrationHandleProperty: profileColor(
-    "calibrationHandle",
-    new Color(0, 255, 255, 0.4), // Bright cyan - semi-transparent
-    new Color(255, 0, 255, 0.4), // Bright magenta - semi-transparent
-  ),
+  calibrationShadowStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "calibrationShadowStroke", {
+    default: new Color(0, 0, 0, 0.9),
+    projector: new Color(0, 0, 0, 0.9),
+  }), // Dark shadow; Dark shadow
+  calibrationHandleProperty: new ProfileColorProperty(TrackLabNamespace, "calibrationHandle", {
+    default: new Color(0, 255, 255, 0.4),
+    projector: new Color(255, 0, 255, 0.4),
+  }), // Bright cyan - semi-transparent; Bright magenta - semi-transparent
 
   // Auto-tracker overlay
-  trackerHintFillProperty: profileColor(
-    "trackerHintFill",
-    new Color(255, 255, 100, 0.9),
-    new Color(255, 255, 120, 0.95),
-  ),
-  trackerSelectionStrokeProperty: profileColor(
-    "trackerSelectionStroke",
-    new Color(255, 255, 0, 0.9),
-    new Color(255, 255, 50, 0.95),
-  ),
-  trackerSelectionFillProperty: profileColor(
-    "trackerSelectionFill",
-    new Color(255, 255, 0, 0.08),
-    new Color(255, 255, 50, 0.12),
-  ),
-  trackerTrailFillProperty: profileColor(
-    "trackerTrailFill",
-    new Color(0, 255, 128, 0.75),
-    new Color(0, 255, 140, 0.85),
-  ),
-  trackerCrosshairStrokeProperty: profileColor(
-    "trackerCrosshairStroke",
-    new Color(255, 60, 60, 0.95),
-    new Color(255, 80, 80, 0.98),
-  ),
-  trackerBadgeFillProperty: profileColor("trackerBadgeFill", new Color(0, 0, 0, 0.65), new Color(240, 240, 240, 0.88)),
+  trackerHintFillProperty: new ProfileColorProperty(TrackLabNamespace, "trackerHintFill", {
+    default: new Color(255, 255, 100, 0.9),
+    projector: new Color(255, 255, 120, 0.95),
+  }),
+  trackerSelectionStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "trackerSelectionStroke", {
+    default: new Color(255, 255, 0, 0.9),
+    projector: new Color(255, 255, 50, 0.95),
+  }),
+  trackerSelectionFillProperty: new ProfileColorProperty(TrackLabNamespace, "trackerSelectionFill", {
+    default: new Color(255, 255, 0, 0.08),
+    projector: new Color(255, 255, 50, 0.12),
+  }),
+  trackerTrailFillProperty: new ProfileColorProperty(TrackLabNamespace, "trackerTrailFill", {
+    default: new Color(0, 255, 128, 0.75),
+    projector: new Color(0, 255, 140, 0.85),
+  }),
+  trackerCrosshairStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "trackerCrosshairStroke", {
+    default: new Color(255, 60, 60, 0.95),
+    projector: new Color(255, 80, 80, 0.98),
+  }),
+  trackerBadgeFillProperty: new ProfileColorProperty(TrackLabNamespace, "trackerBadgeFill", {
+    default: new Color(0, 0, 0, 0.65),
+    projector: new Color(240, 240, 240, 0.88),
+  }),
 
   // Control panel icons
-  iconGrayProperty: profileColor("iconGray", new Color(187, 187, 187), new Color(100, 100, 100)),
-  checkboxColorProperty: profileColor("checkboxColor", new Color(255, 255, 255), new Color(40, 40, 40)),
-  checkboxColorBackgroundProperty: profileColor(
-    "checkboxColorBackground",
-    new Color(80, 80, 100, 0.4),
-    new Color(200, 200, 220, 0.5),
-  ),
+  iconGrayProperty: new ProfileColorProperty(TrackLabNamespace, "iconGray", {
+    default: new Color(187, 187, 187),
+    projector: new Color(100, 100, 100),
+  }),
+  checkboxColorProperty: new ProfileColorProperty(TrackLabNamespace, "checkboxColor", {
+    default: new Color(255, 255, 255),
+    projector: new Color(40, 40, 40),
+  }),
+  checkboxColorBackgroundProperty: new ProfileColorProperty(TrackLabNamespace, "checkboxColorBackground", {
+    default: new Color(80, 80, 100, 0.4),
+    projector: new Color(200, 200, 220, 0.5),
+  }),
   // Preferences checkboxes (fixed appearance, don't change with profile)
-  checkboxPreferencesColorProperty: profileColor(
-    "checkboxPreferencesColor",
-    new Color(40, 40, 40),
-    new Color(40, 40, 40),
-  ),
-  checkboxPreferencesColorBackgroundProperty: profileColor(
+  checkboxPreferencesColorProperty: new ProfileColorProperty(TrackLabNamespace, "checkboxPreferencesColor", {
+    default: new Color(40, 40, 40),
+    projector: new Color(40, 40, 40),
+  }),
+  checkboxPreferencesColorBackgroundProperty: new ProfileColorProperty(
+    TrackLabNamespace,
     "checkboxPreferencesColorBackground",
-    new Color(200, 200, 220, 0.5),
-    new Color(200, 200, 220, 0.5),
+    { default: new Color(200, 200, 220, 0.5), projector: new Color(200, 200, 220, 0.5) },
   ),
 
   // Coordinate system - semi-transparent origin for better positioning
-  originFillProperty: profileColor(
-    "originFill",
-    new Color(255, 255, 255, 0.4), // 40% opacity white
-    new Color(240, 240, 240, 0.4),
-  ),
-  originStrokeProperty: profileColor(
-    "originStroke",
-    new Color(119, 119, 119, 0.8), // 80% opacity stroke for visibility
-    new Color(70, 70, 70, 0.8),
-  ),
+  originFillProperty: new ProfileColorProperty(TrackLabNamespace, "originFill", {
+    default: new Color(255, 255, 255, 0.4),
+    projector: new Color(240, 240, 240, 0.4),
+  }), // 40% opacity white
+  originStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "originStroke", {
+    default: new Color(119, 119, 119, 0.8),
+    projector: new Color(70, 70, 70, 0.8),
+  }), // 80% opacity stroke for visibility
   // Shadow/outline stroke for coordinate system (contrast on all backgrounds)
-  coordShadowStrokeProperty: profileColor(
-    "coordShadowStroke",
-    new Color(0, 0, 0, 0.8), // Dark shadow for contrast on light backgrounds
-    new Color(0, 0, 0, 0.8),
-  ),
+  coordShadowStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "coordShadowStroke", {
+    default: new Color(0, 0, 0, 0.8),
+    projector: new Color(0, 0, 0, 0.8),
+  }), // Dark shadow for contrast on light backgrounds
 
   // Buttons
-  buttonBaseDarkProperty: profileColor(
-    "buttonBaseDark",
-    new Color(51, 51, 102),
-    new Color(220, 220, 235), // Much lighter for projector mode
-  ),
+  buttonBaseDarkProperty: new ProfileColorProperty(TrackLabNamespace, "buttonBaseDark", {
+    default: new Color(51, 51, 102),
+    projector: new Color(220, 220, 235),
+  }), // Much lighter for projector mode
   // Matches scenery-phet's default ColorConstants.LIGHT_BLUE used by the
   // play/pause and step buttons inside TimeControlNode.
-  playbackButtonBaseProperty: profileColor("playbackButtonBase", new Color(153, 206, 255), new Color(153, 206, 255)),
+  playbackButtonBaseProperty: new ProfileColorProperty(TrackLabNamespace, "playbackButtonBase", {
+    default: new Color(153, 206, 255),
+    projector: new Color(153, 206, 255),
+  }),
   // Icon/glyph on the light-blue playback buttons (stays dark in both profiles).
-  playbackButtonIconColorProperty: profileColor("playbackButtonIcon", BLACK, BLACK),
+  playbackButtonIconColorProperty: new ProfileColorProperty(TrackLabNamespace, "playbackButtonIcon", {
+    default: BLACK,
+    projector: BLACK,
+  }),
   // Darker sibling of buttonBaseDark — must lighten in projector so textOnDark
   // (white→black) stays readable, matching buttonBaseDark / comboBox fills.
-  buttonBaseDarkerProperty: profileColor(
-    "buttonBaseDarker",
-    new Color(51, 51, 68),
-    new Color(200, 200, 220), // Light enough for black textOnDark in projector
-  ),
-  buttonRecordProperty: profileColor("buttonRecord", new Color(204, 0, 0), new Color(238, 0, 0)),
-  buttonStopProperty: profileColor("buttonStop", new Color(136, 0, 0), new Color(170, 0, 0)),
-  buttonSuccessProperty: profileColor("buttonSuccess", new Color(34, 170, 34), new Color(60, 204, 60)),
+  buttonBaseDarkerProperty: new ProfileColorProperty(TrackLabNamespace, "buttonBaseDarker", {
+    default: new Color(51, 51, 68),
+    projector: new Color(200, 200, 220),
+  }), // Light enough for black textOnDark in projector
+  buttonRecordProperty: new ProfileColorProperty(TrackLabNamespace, "buttonRecord", {
+    default: new Color(204, 0, 0),
+    projector: new Color(238, 0, 0),
+  }),
+  buttonStopProperty: new ProfileColorProperty(TrackLabNamespace, "buttonStop", {
+    default: new Color(136, 0, 0),
+    projector: new Color(170, 0, 0),
+  }),
+  buttonSuccessProperty: new ProfileColorProperty(TrackLabNamespace, "buttonSuccess", {
+    default: new Color(34, 170, 34),
+    projector: new Color(60, 204, 60),
+  }),
 
   // ComboBox
-  comboBoxButtonFillProperty: profileColor(
-    "comboBoxButtonFill",
-    new Color(51, 51, 102),
-    new Color(220, 220, 235), // Much lighter for projector mode
-  ),
-  comboBoxListFillProperty: profileColor(
-    "comboBoxListFill",
-    new Color(51, 51, 102),
-    new Color(240, 240, 250), // Much lighter for projector mode
-  ),
-  comboBoxHighlightFillProperty: profileColor(
-    "comboBoxHighlightFill",
-    new Color(68, 68, 136),
-    new Color(200, 200, 220), // Much lighter for projector mode
-  ),
+  comboBoxButtonFillProperty: new ProfileColorProperty(TrackLabNamespace, "comboBoxButtonFill", {
+    default: new Color(51, 51, 102),
+    projector: new Color(220, 220, 235),
+  }), // Much lighter for projector mode
+  comboBoxListFillProperty: new ProfileColorProperty(TrackLabNamespace, "comboBoxListFill", {
+    default: new Color(51, 51, 102),
+    projector: new Color(240, 240, 250),
+  }), // Much lighter for projector mode
+  comboBoxHighlightFillProperty: new ProfileColorProperty(TrackLabNamespace, "comboBoxHighlightFill", {
+    default: new Color(68, 68, 136),
+    projector: new Color(200, 200, 220),
+  }), // Much lighter for projector mode
 
   // Text / labels
-  textMutedProperty: profileColor("textMuted", new Color(221, 221, 221), new Color(100, 100, 100)),
-  textOnDarkProperty: profileColor("textOnDark", WHITE, BLACK),
+  textMutedProperty: new ProfileColorProperty(TrackLabNamespace, "textMuted", {
+    default: new Color(221, 221, 221),
+    projector: new Color(100, 100, 100),
+  }),
+  textOnDarkProperty: new ProfileColorProperty(TrackLabNamespace, "textOnDark", { default: WHITE, projector: BLACK }),
 
   // Digitizing overlay (manual point placement)
-  digitizingCursorStrokeProperty: profileColor("digitizingCursorStroke", WHITE, new Color(40, 40, 40)),
-  digitizingMagnifierBorderProperty: profileColor("digitizingMagnifierBorder", WHITE, new Color(40, 40, 40)),
-  digitizingMagnifierCrosshairProperty: profileColor(
-    "digitizingMagnifierCrosshair",
-    new Color(255, 255, 255, 0.8),
-    new Color(40, 40, 40, 0.9),
-  ),
-  digitizingMagnifierShadowProperty: profileColor(
-    "digitizingMagnifierShadow",
-    new Color(0, 0, 0, 0.5),
-    new Color(0, 0, 0, 0.3),
-  ),
+  digitizingCursorStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "digitizingCursorStroke", {
+    default: WHITE,
+    projector: new Color(40, 40, 40),
+  }),
+  digitizingMagnifierBorderProperty: new ProfileColorProperty(TrackLabNamespace, "digitizingMagnifierBorder", {
+    default: WHITE,
+    projector: new Color(40, 40, 40),
+  }),
+  digitizingMagnifierCrosshairProperty: new ProfileColorProperty(TrackLabNamespace, "digitizingMagnifierCrosshair", {
+    default: new Color(255, 255, 255, 0.8),
+    projector: new Color(40, 40, 40, 0.9),
+  }),
+  digitizingMagnifierShadowProperty: new ProfileColorProperty(TrackLabNamespace, "digitizingMagnifierShadow", {
+    default: new Color(0, 0, 0, 0.5),
+    projector: new Color(0, 0, 0, 0.3),
+  }),
 
   // Data table
-  tableHeaderBackgroundProperty: profileColor("tableHeaderBackground", new Color(68, 114, 196), new Color(55, 90, 160)),
-  tableHeaderTextProperty: profileColor("tableHeaderText", WHITE, WHITE),
-  tableRowOddProperty: profileColor("tableRowOdd", WHITE, new Color(250, 250, 250)),
-  tableRowEvenProperty: profileColor("tableRowEven", new Color(235, 241, 251), new Color(230, 238, 250)),
-  tableGridStrokeProperty: profileColor("tableGridStroke", new Color(176, 176, 176), new Color(160, 160, 160)),
-  tableEmptyTextProperty: profileColor("tableEmptyText", new Color(136, 136, 136), new Color(120, 120, 120)),
-  tableSymbolShadowProperty: profileColor("tableSymbolShadow", new Color(0, 0, 0, 0.5), new Color(0, 0, 0, 0.3)),
-  tableBackgroundProperty: profileColor("tableBackground", WHITE, new Color(250, 250, 250)),
+  tableHeaderBackgroundProperty: new ProfileColorProperty(TrackLabNamespace, "tableHeaderBackground", {
+    default: new Color(68, 114, 196),
+    projector: new Color(55, 90, 160),
+  }),
+  tableHeaderTextProperty: new ProfileColorProperty(TrackLabNamespace, "tableHeaderText", {
+    default: WHITE,
+    projector: WHITE,
+  }),
+  tableRowOddProperty: new ProfileColorProperty(TrackLabNamespace, "tableRowOdd", {
+    default: WHITE,
+    projector: new Color(250, 250, 250),
+  }),
+  tableRowEvenProperty: new ProfileColorProperty(TrackLabNamespace, "tableRowEven", {
+    default: new Color(235, 241, 251),
+    projector: new Color(230, 238, 250),
+  }),
+  tableGridStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "tableGridStroke", {
+    default: new Color(176, 176, 176),
+    projector: new Color(160, 160, 160),
+  }),
+  tableEmptyTextProperty: new ProfileColorProperty(TrackLabNamespace, "tableEmptyText", {
+    default: new Color(136, 136, 136),
+    projector: new Color(120, 120, 120),
+  }),
+  tableSymbolShadowProperty: new ProfileColorProperty(TrackLabNamespace, "tableSymbolShadow", {
+    default: new Color(0, 0, 0, 0.5),
+    projector: new Color(0, 0, 0, 0.3),
+  }),
+  tableBackgroundProperty: new ProfileColorProperty(TrackLabNamespace, "tableBackground", {
+    default: WHITE,
+    projector: new Color(250, 250, 250),
+  }),
   // Outline marking the row for the frame the video is parked on.
-  tableCurrentRowProperty: profileColor("tableCurrentRow", new Color(232, 119, 34), new Color(214, 100, 20)),
-  exportButtonProperty: profileColor("exportButton", new Color(76, 175, 80), new Color(60, 150, 65)),
+  tableCurrentRowProperty: new ProfileColorProperty(TrackLabNamespace, "tableCurrentRow", {
+    default: new Color(232, 119, 34),
+    projector: new Color(214, 100, 20),
+  }),
+  exportButtonProperty: new ProfileColorProperty(TrackLabNamespace, "exportButton", {
+    default: new Color(76, 175, 80),
+    projector: new Color(60, 150, 65),
+  }),
 
   // Graph (ConfigurableGraph, GraphDataManager, GraphControlsPanel)
-  graphBackgroundProperty: profileColor("graphBackground", new Color(25, 25, 45, 0.95), new Color(245, 245, 250, 0.98)),
-  controlPanelFillProperty: profileColor(
-    "controlPanelFill",
-    new Color(35, 35, 55, 0.95),
-    new Color(235, 235, 245, 0.98),
-  ),
-  controlPanelStrokeProperty: profileColor("controlPanelStroke", new Color(120, 120, 140), new Color(180, 180, 200)),
-  gridLinesProperty: profileColor("gridLines", new Color(80, 80, 100), new Color(200, 200, 220)),
-  textProperty: profileColor("text", WHITE, BLACK),
-  plot1Property: profileColor(
-    "plot1",
-    new Color(0, 188, 212), // Cyan – visible on dark background
-    new Color(0, 150, 180),
-  ),
+  graphBackgroundProperty: new ProfileColorProperty(TrackLabNamespace, "graphBackground", {
+    default: new Color(25, 25, 45, 0.95),
+    projector: new Color(245, 245, 250, 0.98),
+  }),
+  controlPanelFillProperty: new ProfileColorProperty(TrackLabNamespace, "controlPanelFill", {
+    default: new Color(35, 35, 55, 0.95),
+    projector: new Color(235, 235, 245, 0.98),
+  }),
+  controlPanelStrokeProperty: new ProfileColorProperty(TrackLabNamespace, "controlPanelStroke", {
+    default: new Color(120, 120, 140),
+    projector: new Color(180, 180, 200),
+  }),
+  gridLinesProperty: new ProfileColorProperty(TrackLabNamespace, "gridLines", {
+    default: new Color(80, 80, 100),
+    projector: new Color(200, 200, 220),
+  }),
+  textProperty: new ProfileColorProperty(TrackLabNamespace, "text", { default: WHITE, projector: BLACK }),
+  plot1Property: new ProfileColorProperty(TrackLabNamespace, "plot1", {
+    default: new Color(0, 188, 212),
+    projector: new Color(0, 150, 180),
+  }), // Cyan – visible on dark background
 
   // Measuring tape overlay
-  measuringTapeColorProperty: profileColor("measuringTapeColor", new Color(240, 185, 55), new Color(220, 170, 40)),
-  measuringTapeShadowProperty: profileColor("measuringTapeShadow", new Color(0, 0, 0, 0.45), new Color(0, 0, 0, 0.45)),
+  measuringTapeColorProperty: new ProfileColorProperty(TrackLabNamespace, "measuringTapeColor", {
+    default: new Color(240, 185, 55),
+    projector: new Color(220, 170, 40),
+  }),
+  measuringTapeShadowProperty: new ProfileColorProperty(TrackLabNamespace, "measuringTapeShadow", {
+    default: new Color(0, 0, 0, 0.45),
+    projector: new Color(0, 0, 0, 0.45),
+  }),
 
   // Angle tool overlay
-  angleToolColorProperty: profileColor("angleToolColor", new Color(170, 100, 255), new Color(150, 80, 230)),
-  angleToolShadowProperty: profileColor("angleToolShadow", new Color(0, 0, 0, 0.45), new Color(0, 0, 0, 0.45)),
+  angleToolColorProperty: new ProfileColorProperty(TrackLabNamespace, "angleToolColor", {
+    default: new Color(170, 100, 255),
+    projector: new Color(150, 80, 230),
+  }),
+  angleToolShadowProperty: new ProfileColorProperty(TrackLabNamespace, "angleToolShadow", {
+    default: new Color(0, 0, 0, 0.45),
+    projector: new Color(0, 0, 0, 0.45),
+  }),
 
   // Shared overlay handle outline (used by measuring tape and angle tool endpoints)
-  overlayHandleOutlineProperty: profileColor(
-    "overlayHandleOutline",
-    new Color(0, 0, 0, 0.65),
-    new Color(0, 0, 0, 0.65),
-  ),
+  overlayHandleOutlineProperty: new ProfileColorProperty(TrackLabNamespace, "overlayHandleOutline", {
+    default: new Color(0, 0, 0, 0.65),
+    projector: new Color(0, 0, 0, 0.65),
+  }),
 
   // Shared overlay icon shadow (used by measurement tool panel icons)
-  iconShadowProperty: profileColor("iconShadow", new Color(0, 0, 0, 0.5), new Color(0, 0, 0, 0.5)),
+  iconShadowProperty: new ProfileColorProperty(TrackLabNamespace, "iconShadow", {
+    default: new Color(0, 0, 0, 0.5),
+    projector: new Color(0, 0, 0, 0.5),
+  }),
 
   // Calibration tool warning (endpoints too close)
-  calibrationWarningColorProperty: profileColor(
-    "calibrationWarningColor",
-    new Color(255, 60, 60),
-    new Color(255, 60, 60),
-  ),
+  calibrationWarningColorProperty: new ProfileColorProperty(TrackLabNamespace, "calibrationWarningColor", {
+    default: new Color(255, 60, 60),
+    projector: new Color(255, 60, 60),
+  }),
 
   // Track list panel
-  trashIconProperty: profileColor("trashIcon", new Color(255, 200, 200), new Color(255, 255, 255)),
-  trashButtonBaseProperty: profileColor("trashButtonBase", new Color(160, 40, 40), new Color(190, 50, 50)),
-  trackSymbolTextProperty: profileColor("trackSymbolText", WHITE, WHITE),
+  trashIconProperty: new ProfileColorProperty(TrackLabNamespace, "trashIcon", {
+    default: new Color(255, 200, 200),
+    projector: new Color(255, 255, 255),
+  }),
+  trashButtonBaseProperty: new ProfileColorProperty(TrackLabNamespace, "trashButtonBase", {
+    default: new Color(160, 40, 40),
+    projector: new Color(190, 50, 50),
+  }),
+  trackSymbolTextProperty: new ProfileColorProperty(TrackLabNamespace, "trackSymbolText", {
+    default: WHITE,
+    projector: WHITE,
+  }),
 
   // Video panel header (drag bar between source controls and video content)
-  panelHeaderColorProperty: profileColor(
-    "panelHeaderColor",
-    new Color(50, 50, 80, 0.85), // subtle tint on dark background
-    new Color(200, 200, 220, 0.85), // subtle tint on light background
-  ),
+  panelHeaderColorProperty: new ProfileColorProperty(TrackLabNamespace, "panelHeaderColor", {
+    default: new Color(50, 50, 80, 0.85),
+    projector: new Color(200, 200, 220, 0.85),
+  }), // subtle tint on dark background; subtle tint on light background
 
   // Resize handle knob (bottom-right corner of video content)
-  resizeHandleColorProperty: profileColor(
-    "resizeHandleColor",
-    new Color(120, 160, 220, 0.9), // accent blue for visibility on dark
-    new Color(60, 100, 180, 0.85), // deeper blue for projector mode
-  ),
+  resizeHandleColorProperty: new ProfileColorProperty(TrackLabNamespace, "resizeHandleColor", {
+    default: new Color(120, 160, 220, 0.9),
+    projector: new Color(60, 100, 180, 0.85),
+  }), // accent blue for visibility on dark; deeper blue for projector mode
 
   // Preferences dialog
-  preferencesTextProperty: profileColor("preferencesText", BLACK, BLACK),
-  preferencesTextSecondaryProperty: profileColor(
-    "preferencesTextSecondary",
-    new Color(102, 102, 102),
-    new Color(80, 80, 80),
-  ),
+  preferencesTextProperty: new ProfileColorProperty(TrackLabNamespace, "preferencesText", {
+    default: BLACK,
+    projector: BLACK,
+  }),
+  preferencesTextSecondaryProperty: new ProfileColorProperty(TrackLabNamespace, "preferencesTextSecondary", {
+    default: new Color(102, 102, 102),
+    projector: new Color(80, 80, 80),
+  }),
 
   // Fleet-standard aliases for shared Panel + ButtonOptions modules.
-  panelBackgroundColorProperty: profileColor(
-    "panelBackground",
-    new Color(25, 25, 45, 0.95),
-    new Color(245, 245, 250, 0.98),
-  ),
-  panelBorderColorProperty: profileColor("panelBorder", new Color(120, 120, 140), new Color(180, 180, 200)),
-  textColorProperty: profileColor("textColor", WHITE, BLACK),
+  panelBackgroundColorProperty: new ProfileColorProperty(TrackLabNamespace, "panelBackground", {
+    default: new Color(25, 25, 45, 0.95),
+    projector: new Color(245, 245, 250, 0.98),
+  }),
+  panelBorderColorProperty: new ProfileColorProperty(TrackLabNamespace, "panelBorder", {
+    default: new Color(120, 120, 140),
+    projector: new Color(180, 180, 200),
+  }),
+  textColorProperty: new ProfileColorProperty(TrackLabNamespace, "textColor", { default: WHITE, projector: BLACK }),
 
   // ── Light control surfaces ───────────────────────────────────────────────────
   // White chrome (combo boxes, flat push buttons, editable input fields) stays light
   // in both profiles; its text stays dark.
 
   /** Fill of light control surfaces: combo-box button/list, editable input fields. */
-  controlSurfaceColorProperty: profileColor("controlSurface", "#ffffff", "#ffffff"),
+  controlSurfaceColorProperty: new ProfileColorProperty(TrackLabNamespace, "controlSurface", {
+    default: "#ffffff",
+    projector: "#ffffff",
+  }),
 
   /** Fill of a disabled control surface (grayed-out editable input field). */
-  controlSurfaceDisabledColorProperty: profileColor("controlSurfaceDisabled", "#cccccc", "#cccccc"),
+  controlSurfaceDisabledColorProperty: new ProfileColorProperty(TrackLabNamespace, "controlSurfaceDisabled", {
+    default: "#cccccc",
+    projector: "#cccccc",
+  }),
 
   /** Text on light control surfaces: combo items, flat-button labels, field values, preferences. */
-  controlSurfaceTextColorProperty: profileColor("controlSurfaceText", "#1a1a1a", "#1a1a1a"),
+  controlSurfaceTextColorProperty: new ProfileColorProperty(TrackLabNamespace, "controlSurfaceText", {
+    default: "#1a1a1a",
+    projector: "#1a1a1a",
+  }),
 };
 
 export default TrackLabColors;
