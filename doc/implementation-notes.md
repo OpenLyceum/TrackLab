@@ -85,4 +85,4 @@ pattern in `tests/memory-leak.test.ts`).
 
 ## Multi-screen simulations
 
-Single-screen sim. See fleet `doc/multi-screen.md` if the app ever splits capture vs analysis.
+Single-screen sim. To split capture and analysis, follow [SceneryStackTemplate `doc/multi-screen.md`](https://github.com/OpenLyceum/SceneryStackTemplate/blob/main/doc/multi-screen.md).
