@@ -213,9 +213,9 @@ export default defineConfig({
       includeAssets: ["favicon.ico", "icons/apple-touch-icon.png"],
       manifest: {
         id: name,
-        name: "trackLab",
+        name: "Track Lab",
         // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-        short_name: "trackLab",
+        short_name: "Track Lab",
         description,
         categories: ["education", "science"],
         // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
@@ -252,7 +252,7 @@ export default defineConfig({
             type: "image/png",
             // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
             form_factor: "wide",
-            label: "trackLab",
+            label: "Track Lab",
           },
           {
             src: "screenshots/narrow.png",
@@ -260,7 +260,7 @@ export default defineConfig({
             type: "image/png",
             // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
             form_factor: "narrow",
-            label: "trackLab",
+            label: "Track Lab",
           },
         ],
       },
