@@ -39,11 +39,12 @@ onReadyToLaunch(() => {
     }),
   ];
 
-  const simOptions = {
-    webgl: true,
+  const sim = new Sim(stringManager.getTitleStringProperty(), screens, {
     preferencesModel: new PreferencesModel({
       visualOptions: {
+        // Adds a "Projector Mode" toggle in Preferences → Visual
         supportsProjectorMode: true,
+        // Enables keyboard-navigation highlight outlines
         supportsInteractiveHighlights: true,
       },
       simulationOptions: {
@@ -58,8 +59,7 @@ onReadyToLaunch(() => {
         supportsDynamicLocale: true,
       },
     }),
-  };
-
-  const sim = new Sim(stringManager.getTitleStringProperty(), screens, simOptions);
+    webgl: true,
+  });
   sim.start();
 });
