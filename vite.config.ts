@@ -1,9 +1,84 @@
 import fs from "node:fs";
 import type { ServerResponse } from "node:http";
 import path from "node:path";
-import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
+import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { description, name } from "./package.json";
+
+/**
+ * Security headers required for:
+ *  - COOP/COEP: SharedArrayBuffer support
+ *  - CSP: restrict resource loading to same-origin + known blob/data exceptions
+ *  - Referrer / Permissions: tighten default browser leakage
+ *  - X-Content-Type-Options: prevent MIME sniffing
+ *  - X-Frame-Options: prevent clickjacking (belt-and-suspenders alongside frame-ancestors)
+ */
+const securityHeaders: Record<string, string> = {
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Embedder-Policy": "require-corp",
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    // TODO(scenerystack): drop 'unsafe-eval' when SceneryStack no longer needs
+    // Function/eval for query-parameter parsing — reopen a CSP audit then.
+    // 'unsafe-eval' is required for SceneryStack query parameter parsing
+    // 'wasm-unsafe-eval' is required for the OpenCV WASM module
+    "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
+    // Event-handler attributes are governed by script-src-attr, separately from
+    // inline <script>. SceneryStack's ParallelDOM.pdomInputEnabledListener sets an
+    // inline `onclick` on any control whose input it disables (`return false`, then
+    // `""` when re-enabled) — e.g. the time-control step button whenever the clock
+    // starts or stops. 'unsafe-hashes' lets exactly those two handlers through;
+    // anything else still fails. Without it the fuzz suite fails on the CSP console
+    // error. Regenerate: printf 'return false' | openssl dgst -sha256 -binary | base64
+    "script-src-attr 'unsafe-hashes' " +
+      "'sha256-GZIcz60Uwd6wT3vaYke/atSr53TehbYAPepOa3d03Vw=' " +
+      "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='",
+    // OpenCV spins up blob: workers
+    "worker-src blob: 'self'",
+    // TODO(scenerystack): drop 'unsafe-inline' when SceneryStack stops setting
+    // element.style / cssText for theming (same CSP revisit as unsafe-eval).
+    // Inline styles are set via element.style / cssText throughout the UI layer
+    "style-src 'self' 'unsafe-inline'",
+    // data: for icons
+    // blob: for video playback and CSV download
+    "img-src 'self' blob: data:",
+    // blob: for webcam recordings and loaded video files
+    "media-src 'self' blob:",
+    // blob: for fetch inside workers
+    // data: required for @techstark/opencv-js which loads its WASM as a base64 data URI
+    "connect-src 'self' blob: data:",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+  ].join("; "),
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  // camera=(self), microphone=(self): video capture uses getUserMedia.
+  // A locked policy logs a console error on every request and fails fuzz.
+  "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+};
+
+/** Workbox precache ceiling — SceneryStack bundles exceed the default 2 MB limit. */
+const WORKBOX_MAX_FILE_BYTES = 12 * 1024 * 1024;
+
+/**
+ * Fill `%SIM_DESCRIPTION%` in index.html from package.json, so the page meta tags,
+ * the PWA manifest and package.json can never disagree. Runs before Vite's own
+ * `%ENV%` replacement (order: "pre").
+ */
+function simMetadataHtml(): Plugin {
+  const escaped = description.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return {
+    name: "sim-metadata-html",
+    transformIndexHtml: {
+      order: "pre",
+      handler: (html: string): string => html.replaceAll("%SIM_DESCRIPTION%", escaped),
+    },
+  };
+}
 
 /** Handles a Range request and writes the partial response. Returns false if the header is malformed. */
 function serveRangedFile(
@@ -116,77 +191,6 @@ function serveOpenCV(): Plugin {
     },
   };
 }
-
-/**
- * Security headers required for:
- *  - COOP/COEP: SharedArrayBuffer (OpenCV WASM in the tracking worker)
- *  - CSP: restrict resource loading to same-origin + known blob/data exceptions
- *  - Referrer / Permissions: tighten default browser leakage
- *  - X-Content-Type-Options: prevent MIME sniffing
- *  - X-Frame-Options: prevent clickjacking (belt-and-suspenders alongside frame-ancestors)
- */
-const securityHeaders: Record<string, string> = {
-  "Cross-Origin-Opener-Policy": "same-origin",
-  "Cross-Origin-Embedder-Policy": "require-corp",
-  "Content-Security-Policy": [
-    "default-src 'self'",
-    // 'wasm-unsafe-eval' is required for the OpenCV WASM module
-    // TODO(scenerystack): drop 'unsafe-eval' when SceneryStack no longer needs
-    // Function/eval for query-parameter parsing — reopen a CSP audit then.
-    // 'unsafe-eval' is required for SceneryStack query parameter parsing
-    "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
-    // Event-handler attributes are governed by script-src-attr, separately from
-    // inline <script>. SceneryStack's ParallelDOM.pdomInputEnabledListener sets an
-    // inline `onclick` on any control whose input it disables (`return false`, then
-    // `""` when re-enabled) — e.g. the time-control step button whenever the clock
-    // starts or stops. 'unsafe-hashes' lets exactly those two handlers through;
-    // anything else still fails. Without it the fuzz suite fails on the CSP console
-    // error. Regenerate: printf 'return false' | openssl dgst -sha256 -binary | base64
-    "script-src-attr 'unsafe-hashes' " +
-      "'sha256-GZIcz60Uwd6wT3vaYke/atSr53TehbYAPepOa3d03Vw=' " +
-      "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='",
-    // OpenCV spins up blob: workers
-    "worker-src blob: 'self'",
-    // TODO(scenerystack): drop 'unsafe-inline' when SceneryStack stops setting
-    // element.style / cssText for theming (same CSP revisit as unsafe-eval).
-    // Inline styles are set via element.style / cssText throughout the UI layer
-    "style-src 'self' 'unsafe-inline'",
-    // blob: for video playback and CSV download; data: for icons
-    "img-src 'self' blob: data:",
-    // blob: for webcam recordings and loaded video files
-    "media-src 'self' blob:",
-    // blob: for fetch inside workers; 'self' for local video middleware
-    // data: required for @techstark/opencv-js which loads its WASM as a base64 data URI
-    "connect-src 'self' blob: data:",
-    "font-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "frame-ancestors 'none'",
-  ].join("; "),
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-};
-
-/**
- * Fill `%SIM_DESCRIPTION%` in index.html from package.json, so the page meta tags,
- * the PWA manifest and package.json can never disagree. Runs before Vite's own
- * `%ENV%` replacement (order: "pre").
- */
-function simMetadataHtml(): Plugin {
-  const escaped = description.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-  return {
-    name: "sim-metadata-html",
-    transformIndexHtml: {
-      order: "pre",
-      handler: (html: string): string => html.replaceAll("%SIM_DESCRIPTION%", escaped),
-    },
-  };
-}
-
-/** Workbox precache ceiling — SceneryStack bundles exceed the default 2 MB limit. */
-const WORKBOX_MAX_FILE_BYTES = 12 * 1024 * 1024;
 
 // https://vite.dev/config/
 export default defineConfig({
