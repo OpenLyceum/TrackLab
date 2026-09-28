@@ -1,8 +1,7 @@
 # Implementation Notes - TrackLab
 
 Developer-facing notes on the architecture. The measurement math is documented for educators in
-[model.md](./model.md). Extended OpenCV and graph-gesture detail also lives in
-[architecture.md](./architecture.md).
+[model.md](./model.md).
 
 ## Architecture Overview
 

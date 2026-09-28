@@ -110,7 +110,9 @@ npm run generate-svg-icon   # bouncing-ball icon SVG
 
 `npm run release` runs `npm test` before the version bump, and `src/init.ts` reads `version` from `package.json`, so the About dialog always matches the release.
 
-## Conventions & deliberate deviations
+## Development notes
+
+### Conventions & deliberate deviations
 
 Extra `src/` root files beyond the standard set, each justified by cross-screen use:
 `TrackLabIcons.ts`, `TrackLabButton.ts`, `webcam.ts`, and the `src/tracking/` folder (OpenCV Web Worker).
