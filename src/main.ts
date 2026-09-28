@@ -29,7 +29,7 @@ import { TrackLabScreen } from "./track-lab/TrackLabScreen.js";
 
 onReadyToLaunch(() => {
   const stringManager = StringManager.getInstance();
-  const trackLabPreferences = new TrackLabPreferencesModel();
+  const trackLabPreferences = new TrackLabPreferencesModel(Tandem.ROOT.createTandem("preferences"));
 
   const screens = [
     new TrackLabScreen({

@@ -1,12 +1,13 @@
 /**
- * TrackLabPreferencesModel - Model for trackLab simulation preferences.
+ * TrackLabPreferencesModel.ts
  *
- * Manages user preferences for the trackLab simulation, including whether
- * the auto-tracking feature is enabled and which kinematic quantities appear
- * on the graph axes.
+ * Model for the simulation-specific preferences shown in Preferences →
+ * Simulation. Each preference Property takes its initial value from the
+ * corresponding query parameter in trackLabQueryParameters.
  */
 
 import { BooleanProperty } from "scenerystack/axon";
+import type { Tandem } from "scenerystack/tandem";
 import TrackLabNamespace from "../TrackLabNamespace.js";
 import trackLabQueryParameters from "./trackLabQueryParameters.js";
 
@@ -35,14 +36,23 @@ export class TrackLabPreferencesModel {
    */
   public readonly enableMeasurementToolsProperty: BooleanProperty;
 
-  public constructor() {
-    // Query-parameter controlled startup defaults.
-    this.enableAutoTrackingProperty = new BooleanProperty(trackLabQueryParameters.enableAutoTracking);
-
-    this.showVelocityInGraphProperty = new BooleanProperty(trackLabQueryParameters.showVelocityInGraph);
-    this.showAccelerationInGraphProperty = new BooleanProperty(trackLabQueryParameters.showAccelerationInGraph);
-
-    this.enableMeasurementToolsProperty = new BooleanProperty(trackLabQueryParameters.enableMeasurementTools);
+  public constructor(tandem?: Tandem) {
+    this.enableAutoTrackingProperty = new BooleanProperty(
+      trackLabQueryParameters.enableAutoTracking,
+      tandem ? { tandem: tandem.createTandem("enableAutoTrackingProperty") } : undefined,
+    );
+    this.showVelocityInGraphProperty = new BooleanProperty(
+      trackLabQueryParameters.showVelocityInGraph,
+      tandem ? { tandem: tandem.createTandem("showVelocityInGraphProperty") } : undefined,
+    );
+    this.showAccelerationInGraphProperty = new BooleanProperty(
+      trackLabQueryParameters.showAccelerationInGraph,
+      tandem ? { tandem: tandem.createTandem("showAccelerationInGraphProperty") } : undefined,
+    );
+    this.enableMeasurementToolsProperty = new BooleanProperty(
+      trackLabQueryParameters.enableMeasurementTools,
+      tandem ? { tandem: tandem.createTandem("enableMeasurementToolsProperty") } : undefined,
+    );
   }
 
   public reset(): void {
