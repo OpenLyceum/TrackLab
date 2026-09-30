@@ -140,7 +140,8 @@ export class GraphControlsPanel {
     this.yComboBox = this.buildYComboBox();
 
     // Create title in format "(Y vs X)"
-    this.leftParenNode = new Text("(", {
+    const controls = StringManager.getInstance().getControls();
+    this.leftParenNode = new Text(controls.graphOpenParenStringProperty, {
       font: TITLE_FONT,
       fill: TrackLabColors.textProperty,
     });
@@ -153,7 +154,7 @@ export class GraphControlsPanel {
       },
     );
 
-    this.rightParenNode = new Text(")", {
+    this.rightParenNode = new Text(controls.graphCloseParenStringProperty, {
       font: TITLE_FONT,
       fill: TrackLabColors.textProperty,
     });

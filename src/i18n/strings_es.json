@@ -11,7 +11,9 @@
     "speed": "Velocidad",
     "record": "Grabar",
     "stop": "Detener",
-    "graphVs": "vs"
+    "graphVs": "vs",
+    "graphOpenParen": "(",
+    "graphCloseParen": ")"
   },
   "tracking": {
     "track": "Pista",

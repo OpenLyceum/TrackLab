@@ -23,7 +23,7 @@
  */
 
 import { toFixed } from "scenerystack/dot";
-import { TRACK_COLORS } from "../../TrackLabColors.js";
+import TrackLabColors, { TRACK_COLORS } from "../../TrackLabColors.js";
 import { DATA_DECIMAL_PLACES } from "../../TrackLabConstants.js";
 import type { Track } from "../model/Track.js";
 import { buildDataRows, type DataRow } from "../model/TrackExporter.js";
@@ -176,7 +176,7 @@ function buildHtmlTable(
     const symbolSpan = document.createElement("span");
     symbolSpan.textContent = track.symbol;
     symbolSpan.style.cssText = `
-      color: ${TRACK_COLORS[track.colorIndex]?.toCSS() ?? "#000000"};
+      color: ${TRACK_COLORS[track.colorIndex]?.toCSS() ?? TrackLabColors.controlSurfaceTextColorProperty.value.toCSS()};
       font-weight: bold;
       text-shadow: 0 0 2px ${colors.symbolShadow};
     `;

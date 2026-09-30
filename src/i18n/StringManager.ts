@@ -135,6 +135,8 @@ export class StringManager {
     recordStringProperty: ReadOnlyProperty<string>;
     stopStringProperty: ReadOnlyProperty<string>;
     graphVsStringProperty: ReadOnlyProperty<string>;
+    graphOpenParenStringProperty: ReadOnlyProperty<string>;
+    graphCloseParenStringProperty: ReadOnlyProperty<string>;
   } {
     return {
       playStringProperty: stringProperties.controls.playStringProperty,
@@ -145,6 +147,8 @@ export class StringManager {
       recordStringProperty: stringProperties.controls.recordStringProperty,
       stopStringProperty: stringProperties.controls.stopStringProperty,
       graphVsStringProperty: stringProperties.controls.graphVsStringProperty,
+      graphOpenParenStringProperty: stringProperties.controls.graphOpenParenStringProperty,
+      graphCloseParenStringProperty: stringProperties.controls.graphCloseParenStringProperty,
     };
   }
 
