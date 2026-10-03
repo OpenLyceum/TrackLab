@@ -273,7 +273,7 @@ export class AutoTrackerNode extends Node {
     videoDimensionsProperty.link(videoDimensionsListener);
 
     // ── Track on every video frame ────────────────────────────────────────
-    // OpenCV template matching (track()) is a heavy synchronous operation.
+    // OpenCV template matching (track()) runs asynchronously in the worker.
     // Scheduling it via requestAnimationFrame coalesces rapid timeupdate/seeked
     // events into at most one tracking call per browser paint cycle, preventing
     // event callbacks from piling up and freezing the main thread.
@@ -283,6 +283,11 @@ export class AutoTrackerNode extends Node {
         return;
       }
 
+      // Capture the identity of the frame before the worker reads its pixels.
+      // Playback and track selection can change while matching is in flight.
+      const time = videoElement.currentTime;
+      const frame = timeToFrame(time);
+      const activeId = tracking.activeTrackIdProperty.value;
       this.trackInProgress = true;
       let pt: { x: number; y: number } | null = null;
       try {
@@ -307,10 +312,7 @@ export class AutoTrackerNode extends Node {
       this.updateTrackerVisuals(pt);
 
       // ── Record position to model if a track is active ─────────────────
-      const activeId = tracking.activeTrackIdProperty.value;
       if (activeId) {
-        const time = videoElement.currentTime;
-        const frame = timeToFrame(time);
         // Convert video-local pixel coords directly to model coords.
         // The MVT operates in video-local space, matching these coordinates.
         // Deduplication (skip if frame already recorded) is enforced inside

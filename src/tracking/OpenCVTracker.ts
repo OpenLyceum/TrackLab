@@ -260,7 +260,19 @@ export class OpenCVTracker {
       return null;
     }
 
-    const response = await this.send({ type: "track", imageData, searchX, searchY });
+    let response = await this.send({ type: "track", imageData, searchX, searchY });
+
+    // Retry a failed local search against the same captured frame. Redrawing
+    // the video here could pair a later frame's position with the original time.
+    const isWindowed = searchW !== this.offscreen.width || searchH !== this.offscreen.height;
+    if (
+      isWindowed &&
+      response.type === "track-result" &&
+      response.confidence < OpenCVTracker.MATCH_CONFIDENCE_THRESHOLD
+    ) {
+      const fullFrame = this.readPixels(0, 0, this.offscreen.width, this.offscreen.height);
+      response = await this.send({ type: "track", imageData: fullFrame, searchX: 0, searchY: 0 });
+    }
 
     if (response.type === "track-result") {
       const { x, y, confidence } = response;

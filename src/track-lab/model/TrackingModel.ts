@@ -272,18 +272,20 @@ export class TrackingModel {
    * Called by TrackLabModel whenever the model-view transform changes.
    */
   public retransformTrackPoints(prevMvt: Transform3, newMvt: Transform3): void {
-    const tracks = this.tracksProperty.value;
-    if (tracks.length === 0) {
-      return;
+    const transformPoint = (pt: TrackPoint): TrackPoint => {
+      const pixelPos = prevMvt.transformPosition2(new Vector2(pt.x, pt.y));
+      const newModelPt = newMvt.inversePosition2(pixelPos);
+      return { ...pt, x: newModelPt.x, y: newModelPt.y };
+    };
+
+    const deleted = this.lastDeletedPointProperty.value;
+    if (deleted) {
+      this.lastDeletedPointProperty.value = { ...deleted, point: transformPoint(deleted.point) };
     }
 
-    this.tracksProperty.value = tracks.map((track) => ({
+    this.tracksProperty.value = this.tracksProperty.value.map((track) => ({
       ...track,
-      points: track.points.map((pt) => {
-        const pixelPos = prevMvt.transformPosition2(new Vector2(pt.x, pt.y));
-        const newModelPt = newMvt.inversePosition2(pixelPos);
-        return { ...pt, x: newModelPt.x, y: newModelPt.y };
-      }),
+      points: track.points.map(transformPoint),
     }));
   }
 

@@ -1,3 +1,4 @@
+import { Matrix3, Transform3, Vector2 } from "scenerystack/dot";
 import { beforeEach, describe, expect, it } from "vitest";
 import { computeTrackKinematics } from "../../../src/track-lab/model/KinematicsComputer.js";
 import type { TrackPoint } from "../../../src/track-lab/model/Track.js";
@@ -125,6 +126,26 @@ describe("TrackingModel restore last deleted point", () => {
     model.restoreLastDeletedPoint();
 
     expect(pointAt(model, 5)).toEqual({ frame: 5, time: 0.5, x: 12.5, y: -3.25 });
+  });
+
+  it("keeps a deleted point pinned to its pixel through axis and calibration changes", () => {
+    model.addOrReplacePointOnTrack("track-A", 5, 0.5, 12.5, -3.25);
+    model.removePointFromTrack("track-A", 5);
+    const oldMvt = new Transform3(Matrix3.IDENTITY);
+    const newMvt = new Transform3(
+      Matrix3.translation(100, 50).timesMatrix(Matrix3.rotation2(0.5)).timesMatrix(Matrix3.scaling(2, -2)),
+    );
+    model.retransformTrackPoints(oldMvt, newMvt);
+    model.restoreLastDeletedPoint();
+    const restored = pointAt(model, 5);
+    expect(restored).toBeDefined();
+    if (!restored) {
+      return;
+    }
+    const pixel = newMvt.transformPosition2(new Vector2(restored.x, restored.y));
+    expect(pixel.x).toBeCloseTo(12.5);
+    expect(pixel.y).toBeCloseTo(-3.25);
+    expect(restored.time).toBe(0.5);
   });
 
   it("only remembers the most recent deletion", () => {
