@@ -53,7 +53,7 @@ npm start        # dev server → http://localhost:5173
 | [TypeScript](https://www.typescriptlang.org/) | ^7 | Type-safe JavaScript |
 | [Biome](https://biomejs.dev/) | ^2.5 | Linting + formatting |
 | [OpenCV.js](https://docs.opencv.org/4.x/d5/d10/tutorial_js_root.html) | 4.x (WASM) | Object tracking |
-| [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | ^1 | PWA + service worker |
+| [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | ^2 | PWA + service worker |
 
 ## License
 
