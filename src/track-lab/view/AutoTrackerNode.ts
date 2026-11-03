@@ -230,6 +230,7 @@ export class AutoTrackerNode extends Node {
           // automatically once isTrackerReady becomes true.  Staleness detection
           // (new drag starting before this one resolves) is handled inside the
           // model: initTracker() returns false when superseded.
+          // biome-ignore lint/nursery/noFloatingPromises: the try/catch inside handles every rejection.
           (async () => {
             try {
               const ready = await this.tracking.initTracker(videoElement, region);
