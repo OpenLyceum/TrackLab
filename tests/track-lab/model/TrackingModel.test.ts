@@ -224,3 +224,18 @@ describe("TrackingModel point insertion policies", () => {
     expect(frames(model, "track-B")).toEqual([0, 1]);
   });
 });
+
+describe("TrackingModel track identities", () => {
+  it("keeps palette indices aligned with symbols through Z without reusing deleted tracks", () => {
+    const model = new TrackingModel();
+    for (let index = 0; index < 26; index++) {
+      model.addTrack();
+      const track = model.tracksProperty.value[0];
+      expect(track?.symbol).toBe(String.fromCharCode(65 + index));
+      expect(track?.colorIndex).toBe(index);
+      model.removeTrack(track?.id ?? "");
+    }
+    model.addTrack();
+    expect(model.tracksProperty.value).toEqual([]);
+  });
+});

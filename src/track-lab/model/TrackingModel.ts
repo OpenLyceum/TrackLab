@@ -14,7 +14,6 @@
 import { DerivedProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
 import { type Transform3, Vector2 } from "scenerystack/dot";
 import { OpenCVTracker, type TrackerRegion } from "../../common/tracking/OpenCVTracker.js";
-import { TRACK_COLORS } from "../../TrackLabColors.js";
 import {
   MAX_TRACKS,
   TRACK_SYMBOL_FIRST_CODE,
@@ -125,7 +124,7 @@ export class TrackingModel {
       return;
     }
     const symbol = String.fromCharCode(this.nextSymbolCode);
-    const colorIndex = (this.nextSymbolCode - TRACK_SYMBOL_FIRST_CODE) % TRACK_COLORS.length;
+    const colorIndex = this.nextSymbolCode - TRACK_SYMBOL_FIRST_CODE;
     this.nextSymbolCode++;
 
     const track: Track = {
