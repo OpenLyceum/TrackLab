@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OpenCVTracker } from "../../src/tracking/OpenCVTracker.js";
+import { OpenCVTracker } from "../../src/common/tracking/OpenCVTracker.js";
 
 describe("OpenCVTracker search fallback", () => {
   afterEach(() => vi.unstubAllGlobals());
