@@ -37,6 +37,16 @@ const INFO_DISPLAY_SPACING = 4; // gap between time label and frame counter
 const INFO_DISPLAY_WIDTH = 75; // fixed width to prevent layout shift when text changes
 const REWIND_BUTTON_ICON_SIZE = 16; // font size for the rewind button icon glyph
 
+/** Disposes `node` and all descendants, leaves-first (Node.dispose() does not recurse). */
+function disposeSubtree(node: Node): void {
+  for (const child of [...node.children]) {
+    disposeSubtree(child);
+  }
+  if (!node.isDisposed) {
+    node.dispose();
+  }
+}
+
 /**
  * Playback controls including time control, scrubber, and time/frame display.
  */
@@ -82,12 +92,22 @@ export class PlaybackControlsNode extends HBox {
     };
     playback.playbackRateProperty.lazyLink(onRateChange);
 
+    // Enabled-state proxies for the sun buttons. sun's ButtonModel links to an externally supplied
+    // enabledProperty and never unlinks, so the listener (and the constructor scope it closes over,
+    // including `this`) would pin this node to the long-lived model Properties forever. The proxies
+    // are owned here and disposed with the node, which severs that chain.
+    const videoLoadedProxyProperty = new DerivedProperty([playback.videoLoadedProperty], (loaded) => loaded);
+    const canRestorePointProxyProperty = new DerivedProperty(
+      [tracking.canRestorePointProperty],
+      (canRestore) => canRestore,
+    );
+
     // ── TimeControlNode: play/pause + step back + step forward + speed ─────
     const timeControlNode = new TimeControlNode(playback.isPlayingProperty, {
       timeSpeedProperty: timeSpeedProperty,
       timeSpeeds: [TimeSpeed.NORMAL, TimeSpeed.SLOW],
       speedRadioButtonGroupPlacement: "left",
-      enabledProperty: playback.videoLoadedProperty,
+      enabledProperty: videoLoadedProxyProperty,
       tandem: Tandem.OPT_OUT,
       playPauseStepButtonOptions: {
         includeStepBackwardButton: true,
@@ -292,7 +312,7 @@ export class PlaybackControlsNode extends HBox {
         enabledAppearanceStrategy: (enabled: boolean, button: import("scenerystack/scenery").Node) => {
           button.opacity = enabled ? 1 : 0.45;
         },
-        enabledProperty: playback.videoLoadedProperty,
+        enabledProperty: videoLoadedProxyProperty,
         accessibleName: a11yStrings.rewindToStartStringProperty,
         listener: () => {
           playback.seekToStart();
@@ -329,7 +349,7 @@ export class PlaybackControlsNode extends HBox {
     const restorePointButton = createTrackLabButton(makeRestoreIcon(), {
       baseColor: TrackLabColors.playbackButtonBaseProperty,
       enabledAppearanceStrategy: dimWhenDisabled,
-      enabledProperty: tracking.canRestorePointProperty,
+      enabledProperty: canRestorePointProxyProperty,
       accessibleName: a11yStrings.restorePointStringProperty,
       listener: () => tracking.restoreLastDeletedPoint(),
     });
@@ -337,6 +357,11 @@ export class PlaybackControlsNode extends HBox {
     this.children = [timeControlNode, this.scrubber, rewindButton, erasePointButton, restorePointButton, infoDisplay];
 
     this.disposePlaybackControlsNode = () => {
+      // Node.dispose() does not recurse: these children link to global TrackLabColors
+      // Properties and to the Properties disposed below, so dispose them explicitly.
+      timeControlNode.dispose();
+      rewindButton.dispose();
+      disposeSubtree(infoDisplay);
       erasePointButton.dispose();
       restorePointButton.dispose();
       canErasePointProperty.dispose();
@@ -349,6 +374,8 @@ export class PlaybackControlsNode extends HBox {
       timeSpeedProperty.dispose();
       timeRatioTextProperty.dispose();
       frameCountTextProperty.dispose();
+      videoLoadedProxyProperty.dispose();
+      canRestorePointProxyProperty.dispose();
     };
   }
 

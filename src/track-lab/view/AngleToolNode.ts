@@ -1,4 +1,17 @@
 /**
+ * Disposes `node` and all descendants, leaves-first. Scenery's Node.dispose() does not recurse,
+ * so children linked to global TrackLabColors Properties would otherwise retain this tool.
+ */
+function disposeSubtree(node: Node): void {
+  for (const child of [...node.children]) {
+    disposeSubtree(child);
+  }
+  if (!node.isDisposed) {
+    node.dispose();
+  }
+}
+
+/**
  * AngleToolNode.ts
  *
  * A custom angle measurement overlay for video analysis. Three draggable
@@ -204,29 +217,40 @@ export class AngleToolNode extends Node {
     );
 
     // ── Drag listeners ────────────────────────────────────────────────────
+    const dragListeners: RichDragListener[] = [];
+    const track = (listener: RichDragListener): RichDragListener => {
+      dragListeners.push(listener);
+      return listener;
+    };
     vertexNode.addInputListener(
-      new RichDragListener({
-        positionProperty: model.angleVertexProperty,
-        dragListenerOptions: { start: () => vertexNode.focus() },
-        keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
-        tandem: Tandem.OPT_OUT,
-      }),
+      track(
+        new RichDragListener({
+          positionProperty: model.angleVertexProperty,
+          dragListenerOptions: { start: () => vertexNode.focus() },
+          keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
+          tandem: Tandem.OPT_OUT,
+        }),
+      ),
     );
     arm1Node.addInputListener(
-      new RichDragListener({
-        positionProperty: model.angleArm1Property,
-        dragListenerOptions: { start: () => arm1Node.focus() },
-        keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
-        tandem: Tandem.OPT_OUT,
-      }),
+      track(
+        new RichDragListener({
+          positionProperty: model.angleArm1Property,
+          dragListenerOptions: { start: () => arm1Node.focus() },
+          keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
+          tandem: Tandem.OPT_OUT,
+        }),
+      ),
     );
     arm2Node.addInputListener(
-      new RichDragListener({
-        positionProperty: model.angleArm2Property,
-        dragListenerOptions: { start: () => arm2Node.focus() },
-        keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
-        tandem: Tandem.OPT_OUT,
-      }),
+      track(
+        new RichDragListener({
+          positionProperty: model.angleArm2Property,
+          dragListenerOptions: { start: () => arm2Node.focus() },
+          keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
+          tandem: Tandem.OPT_OUT,
+        }),
+      ),
     );
 
     // ── Visibility ────────────────────────────────────────────────────────
@@ -238,11 +262,17 @@ export class AngleToolNode extends Node {
     this.disposeAngleToolNode = () => {
       geometryMultilink.dispose();
       visibleProperty.unlink(visibleListener);
+      for (const listener of dragListeners) {
+        listener.dispose();
+      }
     };
   }
 
   public override dispose(): void {
     this.disposeAngleToolNode();
+    for (const child of [...this.children]) {
+      disposeSubtree(child);
+    }
     super.dispose();
   }
 }

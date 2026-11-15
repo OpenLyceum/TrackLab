@@ -11,8 +11,11 @@ import { Property, type TReadOnlyProperty } from "scenerystack/axon";
 import { describe, expect, it } from "vitest";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
+import { OverlayToolsModel } from "../src/track-lab/model/OverlayToolsModel.js";
 import { TrackingModel } from "../src/track-lab/model/TrackingModel.js";
 import { VideoPlaybackModel } from "../src/track-lab/model/VideoPlaybackModel.js";
+import { AngleToolNode } from "../src/track-lab/view/AngleToolNode.js";
+import { MeasuringTapeNode } from "../src/track-lab/view/MeasuringTapeNode.js";
 import { PlaybackControlsNode } from "../src/track-lab/view/PlaybackControlsNode.js";
 import { describeDisposalLeaks, forceGC } from "./helpers/memoryLeak.js";
 
@@ -130,4 +133,29 @@ describe("Memory leak regression", () => {
   });
 });
 
-describeDisposalLeaks([]);
+// Long-lived state shared across cases, like screen-model state outliving a view node.
+const overlayTools = new OverlayToolsModel();
+const sharedXProperty = new Property<PlottableProperty>(TIME_PLOTTABLE);
+const sharedYProperty = new Property<PlottableProperty>(POSITION_PLOTTABLE);
+const sharedPlayback = new VideoPlaybackModel();
+const sharedTracking = new TrackingModel();
+const sharedVideoElement = document.createElement("video");
+
+describeDisposalLeaks([
+  {
+    name: "MeasuringTapeNode",
+    create: () => new MeasuringTapeNode(overlayTools.measuringTapeVisibleProperty, overlayTools),
+  },
+  {
+    name: "AngleToolNode",
+    create: () => new AngleToolNode(overlayTools.angleToolVisibleProperty, overlayTools),
+  },
+  {
+    name: "GraphControlsPanel",
+    create: () => new GraphControlsPanel(SAMPLE_PLOTTABLES, sharedXProperty, sharedYProperty, 200),
+  },
+  {
+    name: "PlaybackControlsNode",
+    create: () => new PlaybackControlsNode(sharedPlayback, sharedTracking, sharedVideoElement, noop, noop, noop),
+  },
+]);

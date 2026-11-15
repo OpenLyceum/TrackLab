@@ -1,4 +1,17 @@
 /**
+ * Disposes `node` and all descendants, leaves-first. Scenery's Node.dispose() does not recurse,
+ * so children linked to global TrackLabColors Properties would otherwise retain this tool.
+ */
+function disposeSubtree(node: Node): void {
+  for (const child of [...node.children]) {
+    disposeSubtree(child);
+  }
+  if (!node.isDisposed) {
+    node.dispose();
+  }
+}
+
+/**
  * MeasuringTapeNode.ts
  *
  * A custom measuring tape overlay for video analysis. Two draggable endpoints
@@ -132,21 +145,30 @@ export class MeasuringTapeNode extends Node {
     );
 
     // ── Drag listeners ────────────────────────────────────────────────────
+    const dragListeners: RichDragListener[] = [];
+    const track = (listener: RichDragListener): RichDragListener => {
+      dragListeners.push(listener);
+      return listener;
+    };
     endpoint1Node.addInputListener(
-      new RichDragListener({
-        positionProperty: model.tapPoint1Property,
-        dragListenerOptions: { start: () => endpoint1Node.focus() },
-        keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
-        tandem: Tandem.OPT_OUT,
-      }),
+      track(
+        new RichDragListener({
+          positionProperty: model.tapPoint1Property,
+          dragListenerOptions: { start: () => endpoint1Node.focus() },
+          keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
+          tandem: Tandem.OPT_OUT,
+        }),
+      ),
     );
     endpoint2Node.addInputListener(
-      new RichDragListener({
-        positionProperty: model.tapPoint2Property,
-        dragListenerOptions: { start: () => endpoint2Node.focus() },
-        keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
-        tandem: Tandem.OPT_OUT,
-      }),
+      track(
+        new RichDragListener({
+          positionProperty: model.tapPoint2Property,
+          dragListenerOptions: { start: () => endpoint2Node.focus() },
+          keyboardDragListenerOptions: { dragSpeed: OVERLAY_DRAG_SPEED, shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED },
+          tandem: Tandem.OPT_OUT,
+        }),
+      ),
     );
 
     // ── Visibility ────────────────────────────────────────────────────────
@@ -159,11 +181,17 @@ export class MeasuringTapeNode extends Node {
       geometryMultilink.dispose();
       labelMultilink.dispose();
       visibleProperty.unlink(visibleListener);
+      for (const listener of dragListeners) {
+        listener.dispose();
+      }
     };
   }
 
   public override dispose(): void {
     this.disposeMeasuringTapeNode();
+    for (const child of [...this.children]) {
+      disposeSubtree(child);
+    }
     super.dispose();
   }
 }
