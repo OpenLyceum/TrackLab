@@ -522,15 +522,6 @@ export async function estimateVideoFrameRate(
 
 const WEBP_DEFAULT_FPS = 30;
 
-/** Wraps any object with a `.close()` method so it can be used with `using`. */
-function withDispose<T extends { close(): void }>(resource: T): T & Disposable {
-  return Object.assign(resource, {
-    [Symbol.dispose]() {
-      resource.close();
-    },
-  });
-}
-
 /**
  * Returns frame count, total duration (seconds), and average fps for an
  * animated WebP image using the ImageDecoder API (Chrome 94+).
@@ -542,26 +533,30 @@ async function getAnimatedWebPInfo(blob: Blob): Promise<{ frameCount: number; du
     return null;
   }
   try {
-    using decoder = withDispose(new ImageDecoder({ data: blob.stream(), type: "image/webp", preferAnimation: true }));
-    await decoder.tracks.ready;
-    const track = decoder.tracks.selectedTrack;
-    if (!track) {
-      return null;
+    const decoder = new ImageDecoder({ data: blob.stream(), type: "image/webp", preferAnimation: true });
+    try {
+      await decoder.tracks.ready;
+      const track = decoder.tracks.selectedTrack;
+      if (!track) {
+        return null;
+      }
+      const frameCount = track.frameCount;
+      if (frameCount <= 0) {
+        return null;
+      }
+      // Sum per-frame durations (microseconds) to get total duration in seconds.
+      let totalMicroseconds = 0;
+      for (let i = 0; i < frameCount; i++) {
+        const result = await decoder.decode({ frameIndex: i });
+        totalMicroseconds += result.image.duration ?? 0;
+        result.image.close();
+      }
+      const duration = totalMicroseconds / 1_000_000;
+      const fps = duration > 0 ? frameCount / duration : WEBP_DEFAULT_FPS;
+      return { frameCount, duration, fps };
+    } finally {
+      decoder.close();
     }
-    const frameCount = track.frameCount;
-    if (frameCount <= 0) {
-      return null;
-    }
-    // Sum per-frame durations (microseconds) to get total duration in seconds.
-    let totalMicroseconds = 0;
-    for (let i = 0; i < frameCount; i++) {
-      const result = await decoder.decode({ frameIndex: i });
-      totalMicroseconds += result.image.duration ?? 0;
-      result.image.close();
-    }
-    const duration = totalMicroseconds / 1_000_000;
-    const fps = duration > 0 ? frameCount / duration : WEBP_DEFAULT_FPS;
-    return { frameCount, duration, fps };
   } catch {
     // Not a valid animated WebP or ImageDecoder threw — fall back gracefully.
     return null;
