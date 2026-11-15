@@ -22,13 +22,7 @@ import { VideoPlaybackModel } from "./VideoPlaybackModel.js";
 import { type UploadedVideo, VideoSourceModel, type WebcamRecording } from "./VideoSourceModel.js";
 
 // ── Re-export constants so existing imports from TrackLabModel continue to work ─
-export {
-  DEFAULT_FRAME_RATE,
-  DEFAULT_PLAYBACK_RATE,
-  FRAME_RATE_OPTIONS,
-  FRAME_RATE_RANGE,
-  PLAYBACK_RATE_RANGE,
-} from "./VideoPlaybackModel.js";
+export { DEFAULT_FRAME_RATE, FRAME_RATE_RANGE } from "./VideoPlaybackModel.js";
 export type { UploadedVideo, WebcamRecording } from "./VideoSourceModel.js";
 
 export class TrackLabModel {

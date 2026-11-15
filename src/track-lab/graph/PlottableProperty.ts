@@ -38,7 +38,7 @@ export type RecordPlottable = PlottableBase & {
  * A quantity whose value is read from a live Axon property.
  * The graph reads `property.value` when it needs the current value.
  */
-export type LivePlottable = PlottableBase & {
+type LivePlottable = PlottableBase & {
   property: TReadOnlyProperty<number>;
 };
 
@@ -47,6 +47,3 @@ export type PlottableProperty = RecordPlottable | LivePlottable;
 
 /** True when {@link p} sources its value from a data-record accessor. */
 export const isRecordPlottable = (p: PlottableProperty): p is RecordPlottable => "accessor" in p;
-
-/** True when {@link p} sources its value from a live reactive property. */
-export const isLivePlottable = (p: PlottableProperty): p is LivePlottable => "property" in p;

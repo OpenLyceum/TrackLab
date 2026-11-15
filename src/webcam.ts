@@ -22,7 +22,7 @@ export interface FrameRateCapabilities {
  * Get the configured frame rate from a MediaStream's video track.
  * Returns null if no video track or frameRate is not available.
  */
-export function getFrameRateFromStream(stream: MediaStream): number | null {
+function getFrameRateFromStream(stream: MediaStream): number | null {
   const track = stream.getVideoTracks()[0];
   if (!track) {
     return null;
@@ -33,27 +33,10 @@ export function getFrameRateFromStream(stream: MediaStream): number | null {
 }
 
 /**
- * Get frame rate capabilities from a MediaStream's video track.
- * Returns null if no video track or capabilities are not available.
- */
-export function getFrameRateCapabilitiesFromStream(stream: MediaStream): FrameRateCapabilities | null {
-  const track = stream.getVideoTracks()[0];
-  if (!track) {
-    return null;
-  }
-  const caps = track.getCapabilities();
-  const fr = caps.frameRate;
-  if (!fr || typeof fr.min !== "number" || typeof fr.max !== "number") {
-    return null;
-  }
-  return { min: fr.min, max: fr.max };
-}
-
-/**
  * Get a supported MIME type for MediaRecorder.
  * Prioritizes WebM formats for best browser support, falls back to MP4.
  */
-export function getSupportedMimeType(): string {
+function getSupportedMimeType(): string {
   const types = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"];
   return types.find((type) => MediaRecorder.isTypeSupported(type)) || "";
 }
@@ -66,7 +49,7 @@ export function getSupportedMimeType(): string {
  * Returns frameCount=0 when requestVideoFrameCallback is unavailable; callers
  * should fall back to a duration-based frame estimate in that case.
  */
-export function countWebmFrames(blob: Blob): Promise<{ frameCount: number; duration: number }> {
+function countWebmFrames(blob: Blob): Promise<{ frameCount: number; duration: number }> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.preload = "auto";
@@ -431,7 +414,7 @@ export class WebcamRecorder {
  * @param durationMs - Duration to measure in ms (default 1000)
  * @returns Promise resolving to the measured FPS
  */
-export function measureEmpiricalFrameRate(video: HTMLVideoElement, durationMs: number = 1000): Promise<number> {
+function measureEmpiricalFrameRate(video: HTMLVideoElement, durationMs: number = 1000): Promise<number> {
   const { promise, resolve, reject } = Promise.withResolvers<number>();
   if (video.readyState < 2) {
     reject(new Error("Video must be playing and have enough data"));
@@ -554,9 +537,7 @@ function withDispose<T extends { close(): void }>(resource: T): T & Disposable {
  * Resolves to null if the API is unavailable or the file is not a valid
  * animated WebP.
  */
-export async function getAnimatedWebPInfo(
-  blob: Blob,
-): Promise<{ frameCount: number; duration: number; fps: number } | null> {
+async function getAnimatedWebPInfo(blob: Blob): Promise<{ frameCount: number; duration: number; fps: number } | null> {
   if (typeof ImageDecoder === "undefined") {
     return null;
   }

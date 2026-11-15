@@ -20,7 +20,7 @@ export type CalibrationUnit = (typeof CALIBRATION_UNITS)[number];
 export type VelocityUnit = `${CalibrationUnit}/s`;
 /** Acceleration unit derived from the calibration unit (e.g. `"m/s²"`). */
 export type AccelerationUnit = `${CalibrationUnit}/s²`;
-export const CALIBRATION_DISTANCE_RANGE = new Range(0.001, 100000);
+const CALIBRATION_DISTANCE_RANGE = new Range(0.001, 100000);
 
 // ── Video-local coordinate helpers ──────────────────────────────────────────
 // All tool positions are in video-local coordinates: (0,0) = top-left of the

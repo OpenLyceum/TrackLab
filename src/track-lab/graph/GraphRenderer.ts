@@ -34,7 +34,7 @@ const TICK_LABEL_FONT = new PhetFont({ size: 10 });
 const TICK_LABEL_DECIMALS = 2;
 
 const AXIS_LABEL_FONT = new PhetFont({ size: 12 });
-export const AXIS_LABEL_OFFSET = 35; // exported so resizeGraph can use the same value
+const AXIS_LABEL_OFFSET = 35; // exported so resizeGraph can use the same value
 
 const Y_AXIS_INTERACTION_WIDTH = 60;
 const X_AXIS_INTERACTION_HEIGHT = 30;
@@ -55,7 +55,7 @@ export type ButtonCallbacks = {
 };
 
 /** Helper: format an axis label string from a PlottableProperty. */
-export function formatAxisLabel(property: PlottableProperty): string {
+function formatAxisLabel(property: PlottableProperty): string {
   const name = typeof property.name === "string" ? property.name : property.name.value;
   const unit =
     property.unit === undefined ? undefined : typeof property.unit === "string" ? property.unit : property.unit.value;

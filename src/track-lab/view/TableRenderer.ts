@@ -29,9 +29,9 @@ import type { Track } from "../model/Track.js";
 import { buildDataRows, type DataRow } from "../model/TrackExporter.js";
 
 // ── Grid geometry ─────────────────────────────────────────────────────────────
-export const MAX_TABLE_WIDTH = 400;
-export const MIN_TABLE_HEIGHT = 100;
-export const MAX_TABLE_HEIGHT = 220;
+const MAX_TABLE_WIDTH = 400;
+const MIN_TABLE_HEIGHT = 100;
+const MAX_TABLE_HEIGHT = 220;
 
 // ── Precision ─────────────────────────────────────────────────────────────────
 const MIN_EMPTY_COL_COUNT = 4;

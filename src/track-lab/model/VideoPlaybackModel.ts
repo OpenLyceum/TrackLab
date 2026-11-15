@@ -13,7 +13,6 @@ import { VIDEO_HEIGHT, VIDEO_WIDTH } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 
 // ── Frame rate options ─────────────────────────────────────────────────────
-export const FRAME_RATE_OPTIONS = [15, 24, 25, 29.97, 30, 50, 60] as const;
 export const DEFAULT_FRAME_RATE = 30;
 export const FRAME_RATE_RANGE = new Range(1, 120);
 
@@ -21,8 +20,8 @@ export const FRAME_RATE_RANGE = new Range(1, 120);
 // Stores the actual rate multiplier (1 = normal, 0.5 = slow, 2 = fast).
 // The view maps a TimeSpeed enum to one of these values; the model never
 // imports scenery-phet, so it only sees the numeric rate.
-export const DEFAULT_PLAYBACK_RATE = 1;
-export const PLAYBACK_RATE_RANGE = new Range(0.1, 4);
+const DEFAULT_PLAYBACK_RATE = 1;
+const PLAYBACK_RATE_RANGE = new Range(0.1, 4);
 
 /**
  * Owns all reactive state related to video playback: timing, frame rate,
