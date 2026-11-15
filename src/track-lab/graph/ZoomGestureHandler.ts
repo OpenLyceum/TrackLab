@@ -12,7 +12,7 @@ import type { Pointer } from "scenerystack/scenery";
 import { GRAPH_ZOOM_FACTOR } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 import type { GraphDataManager } from "./GraphDataManager.js";
-import type { ChartConfig, GraphDimensions } from "./GraphInteractionHandler.js";
+import type { ChartConfig, GraphDimensions } from "./GraphTypes.js";
 
 export class ZoomGestureHandler {
   private readonly chartTransform: ChartTransform;

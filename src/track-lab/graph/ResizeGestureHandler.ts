@@ -24,7 +24,7 @@ import {
   RESIZE_HANDLE_TOUCH_DILATION,
 } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import type { GraphDimensions } from "./GraphInteractionHandler.js";
+import type { GraphDimensions } from "./GraphTypes.js";
 
 // Minimum graph dimensions enforced while resizing (px).
 const MIN_WIDTH = 200;

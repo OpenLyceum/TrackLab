@@ -10,7 +10,7 @@ import { RichDragListener } from "scenerystack/scenery";
 import { GRAPH_PAN_SHIFT_DRAG_SPEED, OVERLAY_DRAG_SPEED } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 import type { GraphDataManager } from "./GraphDataManager.js";
-import type { ChartConfig } from "./GraphInteractionHandler.js";
+import type { ChartConfig } from "./GraphTypes.js";
 
 export class PanGestureHandler {
   private readonly chartTransform: ChartTransform;

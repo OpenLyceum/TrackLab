@@ -1,3 +1,7 @@
+import type { ChartConfig, GraphDimensions } from "./GraphTypes.js";
+
+export type { ChartConfig, GraphDimensions } from "./GraphTypes.js";
+
 /**
  * Coordinates all user interactions for the configurable graph by delegating
  * to focused sub-handlers, each of which owns its own state:
@@ -11,11 +15,10 @@
  */
 
 import type { BooleanProperty, TReadOnlyProperty } from "scenerystack/axon";
-import type { ChartRectangle, ChartTransform, TickLabelSet } from "scenerystack/bamboo";
+import type { TickLabelSet } from "scenerystack/bamboo";
 import type { Node, Rectangle } from "scenerystack/scenery";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 import { AxisGestureHandler } from "./AxisGestureHandler.js";
-import type { GraphDataManager } from "./GraphDataManager.js";
 import { HeaderDragHandler } from "./HeaderDragHandler.js";
 import { PanGestureHandler } from "./PanGestureHandler.js";
 import { ResizeGestureHandler } from "./ResizeGestureHandler.js";
@@ -24,11 +27,6 @@ import { ZoomGestureHandler } from "./ZoomGestureHandler.js";
 /**
  * Configuration for the chart and its data management
  */
-export interface ChartConfig {
-  chartTransform: ChartTransform;
-  chartRectangle: ChartRectangle;
-  dataManager: GraphDataManager;
-}
 
 /**
  * UI state properties for graph interactions
@@ -55,10 +53,6 @@ export interface GraphUIElements {
 /**
  * Graph dimensions
  */
-export interface GraphDimensions {
-  width: number;
-  height: number;
-}
 
 /**
  * Thin coordinator that wires up all gesture sub-handlers for a ConfigurableGraph.

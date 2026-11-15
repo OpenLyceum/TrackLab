@@ -13,6 +13,7 @@
 
 import { DerivedProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
 import { type Transform3, Vector2 } from "scenerystack/dot";
+import { OpenCVTracker, type TrackerRegion } from "../../common/tracking/OpenCVTracker.js";
 import { TRACK_COLORS } from "../../TrackLabColors.js";
 import {
   MAX_TRACKS,
@@ -22,7 +23,6 @@ import {
   VIDEO_WIDTH,
 } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
-import { OpenCVTracker, type TrackerRegion } from "../../tracking/OpenCVTracker.js";
 import { computeTrackKinematics } from "./KinematicsComputer.js";
 import type { Track, TrackKinematics, TrackPoint } from "./Track.js";
 

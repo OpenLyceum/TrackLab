@@ -20,7 +20,7 @@ import { type Pointer, type Rectangle, RichDragListener } from "scenerystack/sce
 import { GRAPH_PAN_SHIFT_DRAG_SPEED, GRAPH_ZOOM_FACTOR, OVERLAY_DRAG_SPEED } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 import type { GraphDataManager } from "./GraphDataManager.js";
-import type { ChartConfig, GraphDimensions } from "./GraphInteractionHandler.js";
+import type { ChartConfig, GraphDimensions } from "./GraphTypes.js";
 
 /**
  * The two axis-interaction regions the handler needs access to.
