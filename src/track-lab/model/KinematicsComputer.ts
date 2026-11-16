@@ -11,8 +11,8 @@ import type { KinematicPoint, Track, TrackKinematics } from "./Track.js";
 /**
  * Scalar finite difference at index i within an array of n values.
  *
- * Uses forward difference at the first point, backward difference at the last,
- * and central differences for all interior points.  Returns null if the array
+ * Uses a local quadratic on three samples, evaluated at the current timestamp.
+ * Endpoints use one-sided quadratic fits; two samples use a secant slope.  Returns null if the array
  * has fewer than 2 elements, if the time interval is non-positive, or if
  * either endpoint value is null.
  *
@@ -30,24 +30,40 @@ function finiteDifference(
   if (n < 2) {
     return null;
   }
-  const [prevIdx, nextIdx] = i === 0 ? [0, 1] : i === n - 1 ? [n - 2, n - 1] : [i - 1, i + 1];
-  const prev = getValue(prevIdx);
-  const next = getValue(nextIdx);
-  const dt = getTime(nextIdx) - getTime(prevIdx);
-  if (prev === null || next === null || dt <= 0) {
+  if (n === 2) {
+    const first = getValue(0);
+    const last = getValue(1);
+    const dt = getTime(1) - getTime(0);
+    return first !== null && last !== null && dt > 0 ? (last - first) / dt : null;
+  }
+
+  // Differentiate the local quadratic at this sample, including one-sided
+  // three-point stencils at the ends. Relative times avoid cancellation for
+  // large absolute timestamps and handle skipped/deleted video frames.
+  const firstIndex = i === 0 ? 0 : i === n - 1 ? n - 3 : i - 1;
+  const first = getValue(firstIndex);
+  const middle = getValue(firstIndex + 1);
+  const last = getValue(firstIndex + 2);
+  const firstTime = getTime(firstIndex);
+  const h0 = getTime(firstIndex + 1) - firstTime;
+  const h1 = getTime(firstIndex + 2) - getTime(firstIndex + 1);
+  if (first === null || middle === null || last === null || !(h0 > 0 && h1 > 0)) {
     return null;
   }
-  return (next - prev) / dt;
+  const firstSlope = (middle - first) / h0;
+  const lastSlope = (last - middle) / h1;
+  const curvature = (lastSlope - firstSlope) / (h0 + h1);
+  return firstSlope + curvature * (2 * (getTime(i) - firstTime) - h0);
 }
 
 /**
  * Computes velocity and acceleration for each point in a track.
- * Uses central differences where possible for better accuracy.
+ * Uses local quadratic derivatives with nonuniform sample spacing.
  *
  * Velocity at point i:
  *   - If only one point: null
- *   - Otherwise: (position[i+1] - position[i-1]) / (time[i+1] - time[i-1])
- *     (falls back to forward/backward difference at endpoints)
+ *   - Two points: secant slope
+ *   - Otherwise: derivative of the local three-point quadratic at time[i]
  *
  * Acceleration at point i:
  *   - Computed from velocities using the same differencing approach

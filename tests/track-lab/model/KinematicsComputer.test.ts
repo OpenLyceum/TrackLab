@@ -42,3 +42,39 @@ describe("KinematicsComputer", () => {
     expect(kinematics.points[0]?.ay).toBeNull();
   });
 });
+
+describe("nonuniform sample times", () => {
+  it.each([
+    [0, 1, 3, 4, 5],
+    [0, 0.1, 0.7],
+    [2, 3, 4, 5],
+  ])("recovers quadratic motion including endpoints from %j", (...times) => {
+    const track: Track = {
+      id: "accelerated",
+      symbol: "A",
+      colorIndex: 0,
+      points: times.map((time, frame) => ({ frame, time, x: time * time, y: -3 * time * time + 2 * time })),
+    };
+    for (const point of computeTrackKinematics(track).points) {
+      expect(point.vx).toBeCloseTo(2 * point.time, 10);
+      expect(point.vy).toBeCloseTo(-6 * point.time + 2, 10);
+      expect(point.ax).toBeCloseTo(2, 10);
+      expect(point.ay).toBeCloseTo(-6, 10);
+    }
+  });
+
+  it("uses the secant for two points and rejects repeated timestamps", () => {
+    const track: Track = {
+      id: "two",
+      symbol: "A",
+      colorIndex: 0,
+      points: [
+        { frame: 0, time: 1, x: 2, y: 0 },
+        { frame: 1, time: 3, x: 8, y: 0 },
+      ],
+    };
+    expect(computeTrackKinematics(track).points.map((point) => point.vx)).toEqual([3, 3]);
+    track.points[1]!.time = 1;
+    expect(computeTrackKinematics(track).points.map((point) => point.vx)).toEqual([null, null]);
+  });
+});
