@@ -53,7 +53,7 @@ function disposeSubtree(node: Node): void {
 export class PlaybackControlsNode extends HBox {
   private isScrubbing = false;
   private scrubber: HSlider;
-  private scrubberRange: Range;
+  private readonly scrubberRange: Range;
   private readonly disposePlaybackControlsNode: () => void;
 
   public constructor(

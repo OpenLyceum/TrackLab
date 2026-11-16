@@ -74,7 +74,7 @@ const TITLE_BOTTOM_OFFSET = -5;
  * NaN points are filtered out so the line plot stays clean.
  */
 function mapDataPoints(
-  dataPoints: Array<Record<string, number>>,
+  dataPoints: Record<string, number>[],
   xProperty: PlottableProperty,
   yProperty: PlottableProperty,
 ): Array<{ x: number; y: number }> {
@@ -376,7 +376,7 @@ export class ConfigurableGraph extends Node {
   public setTrackData(
     trackId: string,
     trackColor: import("scenerystack/scenery").TColor,
-    dataPoints: Array<Record<string, number>>,
+    dataPoints: Record<string, number>[],
   ): void {
     if (!this.trackPlots.has(trackId)) {
       const linePlot = new LinePlot(this.chartTransform, [], {

@@ -4,7 +4,7 @@ import { buildDataRows, generateCsv } from "../../../src/track-lab/model/TrackEx
 
 const LABELS = { frame: "Frame", timeSeconds: "t (s)" };
 
-function track(id: string, symbol: string, points: Array<[number, number, number, number]>): Track {
+function track(id: string, symbol: string, points: [number, number, number, number][]): Track {
   return {
     id,
     symbol,
