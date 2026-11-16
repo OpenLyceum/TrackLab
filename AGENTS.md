@@ -50,6 +50,7 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 
 ## Compliance carve-outs
 
+- `.github/workflows/ci.yml`: `unused-mode: advisory` until both Knip default and production baselines are reviewed and cleared ([Baton/doc/knip.md](https://github.com/OpenLyceum/Baton/blob/main/doc/knip.md)).
 - **Domain clock:** `VideoPlaybackModel` drives video timing/scrubbing instead of composing fleet-standard `TimeModel`.
 - **Vite plugins / PWA:** `serveVideos` + `serveOpenCV` are extra Vite plugins (ranged `/videos/` and OpenCV WASM). Workbox `globIgnores: ["opencv.js"]` plus `runtimeCaching` keep the ~11 MB OpenCV payload off the precache. There is no `inlineSingleFile` / `--mode single` wiring — OpenCV WASM and video files cannot collapse into a self-contained HTML file. `npm run icons` prefixes `generate-svg-icon` so `icon.svg` is regenerated from the bouncing-ball script.
 - **Permissions-Policy / CSP:** camera and microphone are allowed (`self`) for video capture; `connect-src` includes `data:` because `@techstark/opencv-js` loads WASM as a base64 data URI.
