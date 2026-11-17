@@ -9,9 +9,60 @@ import packageJson from "./package.json" with { type: "json" };
 const { description, name }: { description: string; name: string } = packageJson;
 
 /**
- * Security headers required for:
- *  - COOP/COEP: SharedArrayBuffer support
- *  - CSP: restrict resource loading to same-origin + known blob/data exceptions
+ * Content-Security-Policy directives: restrict resource loading to same-origin +
+ * known blob/data exceptions. Sent as a header by the dev and preview servers and,
+ * because GitHub Pages cannot send headers, written into the built index.html as a
+ * `<meta>` tag by `cspMetaTag()` below (same approach as the template's vite.config.ts).
+ */
+const cspDirectives: readonly string[] = [
+  "default-src 'self'",
+  // TODO(scenerystack): drop 'unsafe-eval' when SceneryStack no longer needs
+  // Function/eval for query-parameter parsing — reopen a CSP audit then.
+  // 'unsafe-eval' is required for SceneryStack query parameter parsing
+  // 'wasm-unsafe-eval' is required for the OpenCV WASM module
+  "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
+  // Event-handler attributes are governed by script-src-attr, separately from
+  // inline <script>. SceneryStack's ParallelDOM.pdomInputEnabledListener sets an
+  // inline `onclick` on any control whose input it disables (`return false`, then
+  // `""` when re-enabled) — e.g. the time-control step button whenever the clock
+  // starts or stops. 'unsafe-hashes' lets exactly those two handlers through;
+  // anything else still fails. Without it the fuzz suite fails on the CSP console
+  // error. Regenerate: printf 'return false' | openssl dgst -sha256 -binary | base64
+  "script-src-attr 'unsafe-hashes' " +
+    "'sha256-GZIcz60Uwd6wT3vaYke/atSr53TehbYAPepOa3d03Vw=' " +
+    "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='",
+  // OpenCV spins up blob: workers
+  "worker-src blob: 'self'",
+  // TODO(scenerystack): drop 'unsafe-inline' when SceneryStack stops setting
+  // element.style / cssText for theming (same CSP revisit as unsafe-eval).
+  // Inline styles are set via element.style / cssText throughout the UI layer
+  "style-src 'self' 'unsafe-inline'",
+  // data: for icons
+  // blob: for video playback and CSV download
+  "img-src 'self' blob: data:",
+  // blob: for webcam recordings and loaded video files
+  "media-src 'self' blob:",
+  // blob: for fetch inside workers
+  // data: required for @techstark/opencv-js which loads its WASM as a base64 data URI
+  "connect-src 'self' blob: data:",
+  // data: because the build (never the dev server) inlines assets under 4 kB as data: URIs,
+  // e.g. KaTeX's small .woff2 fonts in the built CSS. A data: URI cannot reach another origin.
+  "font-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  // Header only: browsers ignore frame-ancestors in a <meta> CSP (and log a console
+  // error), so the deployed sim stays embeddable in the textbooks' iframes.
+  "frame-ancestors 'none'",
+];
+
+/** Directives a `<meta>` CSP cannot carry (CSP3 §6.2: ignored with a console error). */
+const HEADER_ONLY_CSP_DIRECTIVES: ReadonlySet<string> = new Set(["frame-ancestors", "report-uri", "sandbox"]);
+
+/**
+ * Security headers for the dev and preview servers:
+ *  - COOP/COEP: SharedArrayBuffer support (dev/preview only: GitHub Pages cannot
+ *    send them, so `crossOriginIsolated` is false on the deployed sim)
+ *  - CSP: see `cspDirectives`
  *  - Referrer / Permissions: tighten default browser leakage
  *  - X-Content-Type-Options: prevent MIME sniffing
  *  - X-Frame-Options: prevent clickjacking (belt-and-suspenders alongside frame-ancestors)
@@ -19,42 +70,7 @@ const { description, name }: { description: string; name: string } = packageJson
 const securityHeaders: Record<string, string> = {
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Embedder-Policy": "require-corp",
-  "Content-Security-Policy": [
-    "default-src 'self'",
-    // TODO(scenerystack): drop 'unsafe-eval' when SceneryStack no longer needs
-    // Function/eval for query-parameter parsing — reopen a CSP audit then.
-    // 'unsafe-eval' is required for SceneryStack query parameter parsing
-    // 'wasm-unsafe-eval' is required for the OpenCV WASM module
-    "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'",
-    // Event-handler attributes are governed by script-src-attr, separately from
-    // inline <script>. SceneryStack's ParallelDOM.pdomInputEnabledListener sets an
-    // inline `onclick` on any control whose input it disables (`return false`, then
-    // `""` when re-enabled) — e.g. the time-control step button whenever the clock
-    // starts or stops. 'unsafe-hashes' lets exactly those two handlers through;
-    // anything else still fails. Without it the fuzz suite fails on the CSP console
-    // error. Regenerate: printf 'return false' | openssl dgst -sha256 -binary | base64
-    "script-src-attr 'unsafe-hashes' " +
-      "'sha256-GZIcz60Uwd6wT3vaYke/atSr53TehbYAPepOa3d03Vw=' " +
-      "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='",
-    // OpenCV spins up blob: workers
-    "worker-src blob: 'self'",
-    // TODO(scenerystack): drop 'unsafe-inline' when SceneryStack stops setting
-    // element.style / cssText for theming (same CSP revisit as unsafe-eval).
-    // Inline styles are set via element.style / cssText throughout the UI layer
-    "style-src 'self' 'unsafe-inline'",
-    // data: for icons
-    // blob: for video playback and CSV download
-    "img-src 'self' blob: data:",
-    // blob: for webcam recordings and loaded video files
-    "media-src 'self' blob:",
-    // blob: for fetch inside workers
-    // data: required for @techstark/opencv-js which loads its WASM as a base64 data URI
-    "connect-src 'self' blob: data:",
-    "font-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "frame-ancestors 'none'",
-  ].join("; "),
+  "Content-Security-Policy": cspDirectives.join("; "),
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // camera=(self), microphone=(self): video capture uses getUserMedia.
   // A locked policy logs a console error on every request and fails fuzz.
@@ -62,6 +78,31 @@ const securityHeaders: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
 };
+
+/**
+ * Write the CSP into the built `index.html` right after `<meta charset>`, so the
+ * policy also holds on GitHub Pages, which cannot send response headers. Only the
+ * CSP has a `<meta>` form; the other security headers stay dev/preview-only.
+ */
+function cspMetaTag(): Plugin {
+  const content = cspDirectives
+    .filter((directive) => !HEADER_ONLY_CSP_DIRECTIVES.has(directive.split(" ")[0] ?? ""))
+    .join("; ");
+  return {
+    name: "csp-meta-tag",
+    apply: "build",
+    // A meta CSP only governs what follows it, so it goes before anything that loads a resource.
+    transformIndexHtml: (html: string): string => {
+      const tag = `<meta http-equiv="Content-Security-Policy" content="${content.replace(/"/g, "&quot;")}" />`;
+      const anchor = /<meta\s+charset=[^>]*>/i.exec(html) ?? /<head[^>]*>/i.exec(html);
+      if (anchor === null) {
+        throw new Error("csp-meta-tag: index.html has no <head> to put the CSP in");
+      }
+      const end = anchor.index + anchor[0].length;
+      return `${html.slice(0, end)}\n    ${tag}${html.slice(end)}`;
+    },
+  };
+}
 
 /** Workbox precache ceiling — SceneryStack bundles exceed the default 2 MB limit. */
 const WORKBOX_MAX_FILE_BYTES = 12 * 1024 * 1024;
@@ -212,6 +253,7 @@ export default defineConfig({
   },
   plugins: [
     simMetadataHtml(),
+    cspMetaTag(),
     serveVideos(),
     serveOpenCV(),
     VitePWA({

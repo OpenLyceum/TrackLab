@@ -53,6 +53,7 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 - `.github/workflows/ci.yml`: `unused-mode: advisory` until both Knip default and production baselines are reviewed and cleared ([Baton/doc/knip.md](https://github.com/OpenLyceum/Baton/blob/main/doc/knip.md)).
 - **Domain clock:** `VideoPlaybackModel` drives video timing/scrubbing instead of composing fleet-standard `TimeModel`.
 - `vite.config.ts`: sim-specific, not the template's copy (no `sim.config.json`), for the plugins, caching and policies in the next two bullets.
+  It mirrors the template's `cspMetaTag()` plugin so the CSP also applies on GitHub Pages; keep the two in step.
 - **Vite plugins / PWA:** `serveVideos` + `serveOpenCV` are extra Vite plugins (ranged `/videos/` and OpenCV WASM). Workbox `globIgnores: ["opencv.js"]` plus `runtimeCaching` keep the ~11 MB OpenCV payload off the precache. There is no `inlineSingleFile` / `--mode single` wiring — OpenCV WASM and video files cannot collapse into a self-contained HTML file. `npm run icons` prefixes `generate-svg-icon` so `icon.svg` is regenerated from the bouncing-ball script.
 - **Permissions-Policy / CSP:** camera and microphone are allowed (`self`) for video capture; `connect-src` includes `data:` because `@techstark/opencv-js` loads WASM as a base64 data URI.
 - **Template drift (Baton `check-template-drift.sh`):** `build:single` is omitted (no single-file mode, see above); `icons` runs `generate-svg-icon` first; `videos/` at the repo root holds the sample clips served by `serveVideos`.
