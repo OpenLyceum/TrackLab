@@ -50,7 +50,6 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 
 ## Compliance carve-outs
 
-- `.github/workflows/ci.yml`: `unused-mode: advisory` until both Knip default and production baselines are reviewed and cleared ([Baton/doc/knip.md](https://github.com/OpenLyceum/Baton/blob/main/doc/knip.md)).
 - `memory-leak:DigitizingAwareOverlayNode` — abstract overlay base; dispose coverage is via CoordinateSystemNode.
 - `memory-leak:OpenCVTracker` — OpenCV worker tracker; needs a WASM worker and video frames to exercise dispose.
 - `memory-leak:CalibrationToolNode` — overlay tool needs a laid-out video boundsProperty; constructor fails under happy-dom without it.
