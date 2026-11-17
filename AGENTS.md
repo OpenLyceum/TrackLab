@@ -14,7 +14,7 @@ Physics for educators: `doc/model.md`. Architecture: `doc/implementation-notes.m
 |---|---|
 | Screen | `src/track-lab/TrackLabScreen.ts` |
 | Model | `model/TrackLabModel.ts` (coordinator), `TrackingModel.ts`, `VideoPlaybackModel.ts`, `VideoSourceModel.ts`, `OverlayToolsModel.ts`, `KinematicsComputer.ts` |
-| Tracking | `src/tracking/OpenCVTracker.ts` (template matching in Web Worker) |
+| Tracking | `src/common/tracking/OpenCVTracker.ts` (template matching in Web Worker) |
 | View | `view/TrackLabScreenView.ts`, `VideoPlayerNode.ts`, `WebcamPanel.ts`, `KinematicsGraphNode.ts`, `DataTableNode.ts`, `TableRenderer.ts`, `TrackLabScreenSummaryContent.ts` |
 | Shared helpers | `src/TrackLabConstants.ts`, `TrackLabColors.ts`, `TrackLabButton.ts`, `TrackLabIcons.ts`, `webcam.ts` |
 | Colors / strings | `TrackLabColors.ts`, `src/i18n/StringManager.ts` |
@@ -96,7 +96,7 @@ catches that.
 ### Conventions & deliberate deviations
 
 Extra `src/` root files beyond the standard set, each justified by cross-screen use:
-`TrackLabIcons.ts`, `TrackLabButton.ts`, `webcam.ts`, and the `src/tracking/` folder (OpenCV Web Worker).
+`TrackLabIcons.ts`, `TrackLabButton.ts`, `webcam.ts`, and the `src/common/tracking/` folder (OpenCV Web Worker).
 
 - **OpenCV WASM** requires COOP/COEP headers (configured in Vite dev + production). Sample videos live in top-level `videos/`, served at `/videos/` by the `serveVideos()` Vite plugin (Range-request support for seeking) and copied to `dist/videos/` on build — they are not under `public/`.
 - **Wall-clock timers (allowed exception)** — webcam/video code uses raw `setTimeout`/`setInterval` rather than `stepTimer`: camera-init timeout in `webcam.ts`, FPS-sampling interval in `WebcamPanel.ts`, source-switch debounce in `VideoSourceControlNode.ts`. These track real hardware time, independent of the sim clock.
