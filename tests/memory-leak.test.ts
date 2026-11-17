@@ -7,7 +7,7 @@
  * a block scope) so local strong references die when the helper returns.
  */
 
-import { Property, type TReadOnlyProperty } from "scenerystack/axon";
+import { BooleanProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
 import { describe, expect, it } from "vitest";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
@@ -15,6 +15,7 @@ import { OverlayToolsModel } from "../src/track-lab/model/OverlayToolsModel.js";
 import { TrackingModel } from "../src/track-lab/model/TrackingModel.js";
 import { VideoPlaybackModel } from "../src/track-lab/model/VideoPlaybackModel.js";
 import { AngleToolNode } from "../src/track-lab/view/AngleToolNode.js";
+import { CoordinateSystemNode } from "../src/track-lab/view/CoordinateSystemNode.js";
 import { MeasuringTapeNode } from "../src/track-lab/view/MeasuringTapeNode.js";
 import { PlaybackControlsNode } from "../src/track-lab/view/PlaybackControlsNode.js";
 import { describeDisposalLeaks, forceGC } from "./helpers/memoryLeak.js";
@@ -140,6 +141,7 @@ const sharedYProperty = new Property<PlottableProperty>(POSITION_PLOTTABLE);
 const sharedPlayback = new VideoPlaybackModel();
 const sharedTracking = new TrackingModel();
 const sharedVideoElement = document.createElement("video");
+const videoLoadedProperty = new BooleanProperty(true);
 
 describeDisposalLeaks([
   {
@@ -157,5 +159,10 @@ describeDisposalLeaks([
   {
     name: "PlaybackControlsNode",
     create: () => new PlaybackControlsNode(sharedPlayback, sharedTracking, sharedVideoElement, noop, noop, noop),
+  },
+  {
+    name: "CoordinateSystemNode",
+    create: () => new CoordinateSystemNode(videoLoadedProperty, overlayTools, sharedTracking.activeTrackIdProperty),
+    keepAlive: () => [videoLoadedProperty, overlayTools, sharedTracking],
   },
 ]);

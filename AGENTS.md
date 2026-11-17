@@ -51,6 +51,13 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 ## Compliance carve-outs
 
 - `.github/workflows/ci.yml`: `unused-mode: advisory` until both Knip default and production baselines are reviewed and cleared ([Baton/doc/knip.md](https://github.com/OpenLyceum/Baton/blob/main/doc/knip.md)).
+- `memory-leak:DigitizingAwareOverlayNode` — abstract overlay base; dispose coverage is via CoordinateSystemNode.
+- `memory-leak:OpenCVTracker` — OpenCV worker tracker; needs a WASM worker and video frames to exercise dispose.
+- `memory-leak:CalibrationToolNode` — overlay tool needs a laid-out video boundsProperty; constructor fails under happy-dom without it.
+- `memory-leak:ConfigurableGraph` — ComboBox / chart Text retain via sim-lifetime StringManager Properties after dispose.
+- `memory-leak:KinematicsGraphNode` — graph chrome retains via StringManager / preferences Properties after dispose.
+- `memory-leak:TrackListPanel` — panel / TrackRowNode chrome retains via StringManager Properties after dispose.
+- `memory-leak:TrackRowNode` — private row owned by TrackListPanel.
 - **Domain clock:** `VideoPlaybackModel` drives video timing/scrubbing instead of composing fleet-standard `TimeModel`.
 - `vite.config.ts`: sim-specific, not the template's copy (no `sim.config.json`), for the plugins, caching and policies in the next two bullets.
   It mirrors the template's `cspMetaTag()` plugin so the CSP also applies on GitHub Pages; keep the two in step.
