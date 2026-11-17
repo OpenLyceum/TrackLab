@@ -46,8 +46,8 @@
     "generate-svg-icon": "node scripts/bouncingBallToSVG.ts"
   },
   "dependencies": {
-    "@techstark/opencv-js": "^5.0.0-release.1",
-    "scenerystack": "^3.0.0"
+    "scenerystack": "^3.0.0",
+    "@techstark/opencv-js": "^5.0.0-release.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.7",
