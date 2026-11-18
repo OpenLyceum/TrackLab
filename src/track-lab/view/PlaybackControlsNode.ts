@@ -101,6 +101,11 @@ export class PlaybackControlsNode extends HBox {
       [tracking.canRestorePointProperty],
       (canRestore) => canRestore,
     );
+    // The step buttons' enabled state, same as PlayPauseStepButtonGroup's default
+    // (enabled while paused). Supplied here because the group builds that default
+    // with DerivedProperty.not(isPlayingProperty) and never disposes it, leaving a
+    // listener on isPlayingProperty for every PlaybackControlsNode built.
+    const stepButtonsEnabledProperty = DerivedProperty.not(playback.isPlayingProperty);
 
     // ── TimeControlNode: play/pause + step back + step forward + speed ─────
     const timeControlNode = new TimeControlNode(playback.isPlayingProperty, {
@@ -113,9 +118,11 @@ export class PlaybackControlsNode extends HBox {
         includeStepBackwardButton: true,
         stepBackwardButtonOptions: {
           listener: onStepBackward,
+          enabledProperty: stepButtonsEnabledProperty,
         },
         stepForwardButtonOptions: {
           listener: onStepForward,
+          enabledProperty: stepButtonsEnabledProperty,
         },
       },
       speedRadioButtonGroupOptions: {
@@ -376,6 +383,8 @@ export class PlaybackControlsNode extends HBox {
       frameCountTextProperty.dispose();
       videoLoadedProxyProperty.dispose();
       canRestorePointProxyProperty.dispose();
+      // After timeControlNode, whose step buttons link to it.
+      stepButtonsEnabledProperty.dispose();
     };
   }
 

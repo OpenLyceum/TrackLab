@@ -50,7 +50,6 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 
 ## Compliance carve-outs
 
-- `memory-leak:VideoPlayerNode` — sim-lifetime root of the video panel, built once by `TrackLabScreenView`, which joist never disposes. It owns the `<video>` element and a document `keydown` listener. Its teardown also relies on `VideoSourceControlNode`, which has no `dispose()`. The components under it (`AutoTrackerNode`, `DigitizingOverlayNode`, `PlaybackControlsNode`, `WebcamPanel`) have their own cases.
 - `memory-leak:OpenCVTracker` — OpenCV worker tracker; needs a WASM worker and video frames to exercise dispose.
 - `memory-leak:CalibrationToolNode` — overlay tool needs a laid-out video boundsProperty; constructor fails under happy-dom without it.
 - `memory-leak:ConfigurableGraph` — ComboBox / chart Text retain via sim-lifetime StringManager Properties after dispose.
@@ -69,7 +68,7 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 | `vitest.config.ts` | `happy-dom` environment, `setupFiles`, `execArgv: ["--expose-gc"]` |
 | `tests/setup.ts` | Canvas / AudioContext mocks + `init({ name: "…" })` before SceneryStack imports |
 | `tests/**/*.test.ts` | Model/physics unit tests — mirror `src/` under `tests/` |
-| `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression (fleet pattern); TrackRowNode rebuilds on track add/remove through a live `TrackListPanel` |
+| `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression (fleet pattern); TrackRowNode rebuilds on track add/remove through a live `TrackListPanel`; `VideoPlayerNode` / `VideoSourceControlNode` teardown (listener counts, document `keydown`, hidden file input, `<video>` and blob-URL release). `VideoPlayerNode` is never disposed while the sim runs, but its `dispose()` is complete and tested |
 | `tsconfig.test.json` | Typecheck config for `tests/` (adds `node` types), run by `npm run check` |
 
 Actual specs:

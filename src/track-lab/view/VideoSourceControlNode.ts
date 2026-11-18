@@ -92,6 +92,7 @@ export class VideoSourceControlNode extends HBox {
   public readonly webcamPanel: WebcamPanel;
   private readonly selectedVideoProperty: Property<string | null>;
   private lastLoadedValue: string | null = null;
+  private readonly disposeVideoSourceControl: () => void;
 
   public constructor(
     sources: VideoSourceModel,
@@ -205,11 +206,15 @@ export class VideoSourceControlNode extends HBox {
     // This is the single canonical place where a video source is activated.
     // Each branch calls a model method that sets all affected properties
     // atomically, preventing subscribers from seeing intermediate states.
+    // A pending header revert is cancelled on dispose, so it cannot write to a
+    // disposed Property.
+    let headerRevertTimeout: ReturnType<typeof setTimeout> | null = null;
     selectedVideoProperty.lazyLink((value) => {
       // Revert section-header selections (defer to avoid Property reentry)
       if (value?.startsWith(HEADER_VALUE_PREFIX)) {
         const revertTo = this.lastLoadedValue;
-        setTimeout(() => {
+        headerRevertTimeout = setTimeout(() => {
+          headerRevertTimeout = null;
           selectedVideoProperty.value = revertTo;
         }, 0);
         return;
@@ -375,8 +380,9 @@ export class VideoSourceControlNode extends HBox {
     videoComboBox = buildComboBox([], []);
 
     // Rebuild when either list changes
-    sources.webcamRecordingsProperty.lazyLink(() => rebuildComboBox());
-    sources.uploadedVideosProperty.lazyLink(() => rebuildComboBox());
+    const userVideosListener = (): void => rebuildComboBox();
+    sources.webcamRecordingsProperty.lazyLink(userVideosListener);
+    sources.uploadedVideosProperty.lazyLink(userVideosListener);
 
     // ── Download button (visible for user-provided videos) ────────────────
     const downloadButton = createTrackLabButton(makeDownloadIcon(), {
@@ -396,9 +402,10 @@ export class VideoSourceControlNode extends HBox {
       },
     });
     downloadButton.visible = false;
-    sources.isUserVideoProperty.link((isUserVideo) => {
+    const isUserVideoListener = (isUserVideo: boolean): void => {
       downloadButton.visible = isUserVideo;
-    });
+    };
+    sources.isUserVideoProperty.link(isUserVideoListener);
 
     // ── Upload button (opens file picker for local video files) ───────────
     const fileInput = document.createElement("input");
@@ -407,21 +414,31 @@ export class VideoSourceControlNode extends HBox {
     fileInput.style.display = "none";
     document.body.appendChild(fileInput);
 
-    fileInput.addEventListener("change", async () => {
-      const file = fileInput.files?.[0];
-      if (!file) {
-        return;
-      }
-      // Reset so selecting the same file again still triggers "change"
-      fileInput.value = "";
+    // The change listener is aborted on dispose and the hidden input removed from
+    // the document; otherwise both last as long as the page.
+    const fileInputController = new AbortController();
+    fileInput.addEventListener(
+      "change",
+      async () => {
+        const file = fileInput.files?.[0];
+        if (!file) {
+          return;
+        }
+        // Reset so selecting the same file again still triggers "change"
+        fileInput.value = "";
 
-      // Delegate metadata extraction (animated WebP frame counting, WebM frame
-      // counting + duration fix, generic duration probing) to the model layer.
-      const upload = await sources.addUploadedVideoFromFile(file);
-      // Setting selectedVideoProperty triggers the lazyLink which calls
-      // activation.activateUpload(upload) and onWebcamReady atomically.
-      selectedVideoProperty.value = upload.id;
-    });
+        // Delegate metadata extraction (animated WebP frame counting, WebM frame
+        // counting + duration fix, generic duration probing) to the model layer.
+        const upload = await sources.addUploadedVideoFromFile(file);
+        if (this.isDisposed) {
+          return;
+        }
+        // Setting selectedVideoProperty triggers the lazyLink which calls
+        // activation.activateUpload(upload) and onWebcamReady atomically.
+        selectedVideoProperty.value = upload.id;
+      },
+      { signal: fileInputController.signal },
+    );
 
     const uploadButton = createTrackLabButton(makeUploadIcon(), {
       accessibleName: videoSourceStrings.openVideoFileStringProperty,
@@ -470,31 +487,61 @@ export class VideoSourceControlNode extends HBox {
     // ── Eye toggle: show/hide video + all overlays ──────────────────────────
     const a11yStrings = StringManager.getInstance().getA11y();
     const iconFill = TrackLabColors.textOnDarkProperty;
-    const eyeButton = new BooleanRectangularToggleButton(
-      videoContentVisibleProperty,
-      new Path(eyeSolidShape, { fill: iconFill }),
-      new Path(eyeSlashSolidShape, { fill: iconFill }),
-      {
-        baseColor: TrackLabColors.buttonBaseDarkProperty,
-        buttonAppearanceStrategy: ButtonNode.FlatAppearanceStrategy,
-        size: new Dimension2(
-          BUTTON_MIN_CONTENT_SIZE + 2 * BUTTON_X_MARGIN,
-          BUTTON_MIN_CONTENT_SIZE + 2 * BUTTON_Y_MARGIN,
-        ),
-        touchAreaXDilation: TOUCH_AREA_DILATION,
-        touchAreaYDilation: TOUCH_AREA_DILATION,
-        mouseAreaXDilation: MOUSE_AREA_DILATION,
-        mouseAreaYDilation: MOUSE_AREA_DILATION,
-        accessibleName: a11yStrings.toggleVideoVisibilityStringProperty,
-        tandem: Tandem.OPT_OUT,
-        visible: false,
-      },
-    );
-    videoLoadedProperty.link((loaded) => {
-      eyeButton.visible = loaded;
+    const eyeOnIcon = new Path(eyeSolidShape, { fill: iconFill });
+    const eyeOffIcon = new Path(eyeSlashSolidShape, { fill: iconFill });
+    const eyeButton = new BooleanRectangularToggleButton(videoContentVisibleProperty, eyeOnIcon, eyeOffIcon, {
+      baseColor: TrackLabColors.buttonBaseDarkProperty,
+      buttonAppearanceStrategy: ButtonNode.FlatAppearanceStrategy,
+      size: new Dimension2(
+        BUTTON_MIN_CONTENT_SIZE + 2 * BUTTON_X_MARGIN,
+        BUTTON_MIN_CONTENT_SIZE + 2 * BUTTON_Y_MARGIN,
+      ),
+      touchAreaXDilation: TOUCH_AREA_DILATION,
+      touchAreaYDilation: TOUCH_AREA_DILATION,
+      mouseAreaXDilation: MOUSE_AREA_DILATION,
+      mouseAreaYDilation: MOUSE_AREA_DILATION,
+      accessibleName: a11yStrings.toggleVideoVisibilityStringProperty,
+      tandem: Tandem.OPT_OUT,
+      visible: false,
     });
+    const videoLoadedListener = (loaded: boolean): void => {
+      eyeButton.visible = loaded;
+    };
+    videoLoadedProperty.link(videoLoadedListener);
 
     this.children = [videoComboBox, eyeButton, downloadButton, uploadButton, webcamButton];
+
+    this.disposeVideoSourceControl = () => {
+      if (headerRevertTimeout !== null) {
+        clearTimeout(headerRevertTimeout);
+        headerRevertTimeout = null;
+      }
+      sources.webcamRecordingsProperty.unlink(userVideosListener);
+      sources.uploadedVideosProperty.unlink(userVideosListener);
+      sources.isUserVideoProperty.unlink(isUserVideoListener);
+      videoLoadedProperty.unlink(videoLoadedListener);
+      fileInputController.abort();
+      fileInput.remove();
+      // The buttons link to their accessible-name Properties and the ComboBox
+      // items' Text to string Properties; the toggle button also links to
+      // videoContentVisibleProperty. Node.dispose() does not dispose children.
+      videoComboBox?.dispose();
+      eyeButton.dispose();
+      eyeOnIcon.dispose();
+      eyeOffIcon.dispose();
+      downloadButton.dispose();
+      uploadButton.dispose();
+      webcamButton.dispose();
+      // Created here, though TrackLabScreenView places it in the scene graph.
+      this.webcamPanel.dispose();
+      // Disposed after the ComboBox, which links to it.
+      selectedVideoProperty.dispose();
+    };
+  }
+
+  public override dispose(): void {
+    this.disposeVideoSourceControl();
+    super.dispose();
   }
 
   /**

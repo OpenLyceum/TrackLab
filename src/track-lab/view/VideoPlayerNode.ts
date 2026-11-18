@@ -144,7 +144,7 @@ export class VideoPlayerNode extends Node {
           () => {
             this.videoElement.currentTime = 0;
           },
-          { once: true },
+          { once: true, signal },
         );
         this.videoElement.currentTime = Number.MAX_SAFE_INTEGER;
       }
@@ -329,36 +329,36 @@ export class VideoPlayerNode extends Node {
     let resizeStartScale = 1;
     let resizeStartHandleX = 0;
     let resizeStartPointerX = 0;
-    resizeHandle.addInputListener(
-      new RichDragListener({
-        dragListenerOptions: {
-          start: (event) => {
-            resizeStartScale = model.playback.panelSizeScaleProperty.value;
-            resizeStartHandleX = this.videoContentWrapper.right;
-            resizeStartPointerX = event.pointer.point.x;
-          },
-          drag: (event) => {
-            const deltaX = event.pointer.point.x - resizeStartPointerX;
-            // Proportional scaling: new scale = startScale × (newRightEdge / startRightEdge)
-            const newScale = (resizeStartScale * (resizeStartHandleX + deltaX)) / resizeStartHandleX;
-            const range = model.playback.panelSizeScaleProperty.range;
-            model.playback.panelSizeScaleProperty.value = Math.max(range.min, Math.min(range.max, newScale));
-          },
+    // Disposed with the node: its keyboard half links to scenery's key-string Properties.
+    const resizeDragListener = new RichDragListener({
+      dragListenerOptions: {
+        start: (event) => {
+          resizeStartScale = model.playback.panelSizeScaleProperty.value;
+          resizeStartHandleX = this.videoContentWrapper.right;
+          resizeStartPointerX = event.pointer.point.x;
         },
-        keyboardDragListenerOptions: {
-          keyboardDragDirection: "leftRight",
-          dragSpeed: 80,
-          shiftDragSpeed: 30,
-          drag: (_event, listener) => {
-            const current = model.playback.panelSizeScaleProperty.value;
-            const handleX = Math.max(1, this.videoContentWrapper.right);
-            const newScale = current * (1 + listener.modelDelta.x / handleX);
-            const range = model.playback.panelSizeScaleProperty.range;
-            model.playback.panelSizeScaleProperty.value = Math.max(range.min, Math.min(range.max, newScale));
-          },
+        drag: (event) => {
+          const deltaX = event.pointer.point.x - resizeStartPointerX;
+          // Proportional scaling: new scale = startScale × (newRightEdge / startRightEdge)
+          const newScale = (resizeStartScale * (resizeStartHandleX + deltaX)) / resizeStartHandleX;
+          const range = model.playback.panelSizeScaleProperty.range;
+          model.playback.panelSizeScaleProperty.value = Math.max(range.min, Math.min(range.max, newScale));
         },
-      }),
-    );
+      },
+      keyboardDragListenerOptions: {
+        keyboardDragDirection: "leftRight",
+        dragSpeed: 80,
+        shiftDragSpeed: 30,
+        drag: (_event, listener) => {
+          const current = model.playback.panelSizeScaleProperty.value;
+          const handleX = Math.max(1, this.videoContentWrapper.right);
+          const newScale = current * (1 + listener.modelDelta.x / handleX);
+          const range = model.playback.panelSizeScaleProperty.range;
+          model.playback.panelSizeScaleProperty.value = Math.max(range.min, Math.min(range.max, newScale));
+        },
+      },
+    });
+    resizeHandle.addInputListener(resizeDragListener);
 
     // ── Fit video element to its intrinsic aspect ratio ───────────────────
     const onDimensionsLoaded = () => {
@@ -442,11 +442,27 @@ export class VideoPlayerNode extends Node {
       model.playback.panelSizeScaleProperty.unlink(panelSizeScaleListener);
       model.playback.currentTimeProperty.unlink(syncVideoFromModelTime);
       a11yStrings.videoPlayerStringProperty.unlink(videoAriaLabelListener);
+      // Release the media: stop playback and detach any source, so the
+      // element drops its decoder and network resources.
+      this.videoElement.pause();
+      this.videoElement.srcObject = null;
+      this.videoElement.removeAttribute("src");
+      this.videoElement.load();
       if (this.currentBlobUrl) {
         URL.revokeObjectURL(this.currentBlobUrl);
         this.currentBlobUrl = null;
       }
+      resizeHandle.removeInputListener(resizeDragListener);
+      resizeDragListener.dispose();
+      // Children that link to string or accessible-name Properties; Node.dispose()
+      // does not dispose children. Overlays added through addVideoOverlay() belong
+      // to their creator and are left alone.
+      resizeHandle.dispose();
+      this.panelHeaderBar.dispose();
+      videoErrorText.dispose();
+      videoNode.dispose();
       autoTrackerNode.dispose();
+      digitizingOverlayNode.dispose();
       this.playbackControlsNode.dispose();
       this.videoSourceControlNode.dispose();
       autoTrackingShownProperty.dispose();

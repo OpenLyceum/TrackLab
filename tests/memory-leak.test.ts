@@ -8,8 +8,8 @@
  */
 
 import { BooleanProperty, NumberProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
-import type { Node } from "scenerystack/scenery";
-import { describe, expect, it } from "vitest";
+import { KeyboardDragDirectionToKeyStringPropertiesMap, Node } from "scenerystack/scenery";
+import { describe, expect, it, vi } from "vitest";
 import { StringManager } from "../src/i18n/StringManager.js";
 import TrackLabColors from "../src/TrackLabColors.js";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
@@ -26,6 +26,8 @@ import { DigitizingOverlayNode } from "../src/track-lab/view/DigitizingOverlayNo
 import { MeasuringTapeNode } from "../src/track-lab/view/MeasuringTapeNode.js";
 import { PlaybackControlsNode } from "../src/track-lab/view/PlaybackControlsNode.js";
 import { TrackListPanel } from "../src/track-lab/view/TrackListPanel.js";
+import { VideoPlayerNode } from "../src/track-lab/view/VideoPlayerNode.js";
+import { VideoSourceControlNode } from "../src/track-lab/view/VideoSourceControlNode.js";
 import { WebcamPanel } from "../src/track-lab/view/WebcamPanel.js";
 import { describeDisposalLeaks, expectNoListenerGrowth, forceGC } from "./helpers/memoryLeak.js";
 
@@ -54,7 +56,7 @@ const SAMPLE_PLOTTABLES: PlottableProperty[] = [TIME_PLOTTABLE, POSITION_PLOTTAB
  * the model's own DerivedProperties, so only the exact count distinguishes a
  * clean dispose from a retained one.
  */
-function listenerCount(property: TReadOnlyProperty<number>): number {
+function listenerCount(property: TReadOnlyProperty<unknown>): number {
   return (property as unknown as { getListenerCount(): number }).getListenerCount();
 }
 
@@ -104,6 +106,8 @@ describe("Memory leak regression", () => {
     const videoElement = document.createElement("video");
 
     const baseline = listenerCount(playback.currentTimeProperty);
+    // The step buttons' enabled state derives from isPlayingProperty.
+    const isPlayingBaseline = listenerCount(playback.isPlayingProperty);
 
     for (let i = 0; i < 3; i++) {
       const node = new PlaybackControlsNode(playback, tracking, videoElement, noop, noop, noop);
@@ -111,6 +115,7 @@ describe("Memory leak regression", () => {
     }
 
     expect(listenerCount(playback.currentTimeProperty)).toBe(baseline);
+    expect(listenerCount(playback.isPlayingProperty)).toBe(isPlayingBaseline);
   });
 
   it("PlaybackControlsNode scrubber rebuilds do not accumulate listeners", () => {
@@ -376,5 +381,159 @@ describe("video-panel components leave no listeners on string, accessible-name o
     await expectNoListenerGrowth(linkedProperties, () => {
       create().dispose();
     });
+  });
+});
+
+// ── VideoSourceControlNode and VideoPlayerNode ───────────────────────────────
+// VideoPlayerNode is built once by TrackLabScreenView and never disposed while
+// the sim runs; these cases prove its teardown (and its source controls') would
+// release everything if it were.
+
+const videoSourceStrings = stringManager.getVideoSource();
+const uiStrings = stringManager.getUI();
+const videoPlayerA11y = stringManager.getA11y();
+const sourceListParent = new Node();
+const sourceVideoContentVisibleProperty = new BooleanProperty(true);
+const sourceVideoLoadedProperty = new BooleanProperty(true);
+
+/** Sim-lifetime string, accessible-name and model Properties VideoSourceControlNode links to. */
+const videoSourceControlLinkedProperties: readonly object[] = [
+  ...Object.values(stringManager.getVideoFiles()),
+  uiStrings.selectVideoStringProperty,
+  uiStrings.sampleVideosStringProperty,
+  uiStrings.myRecordingsStringProperty,
+  uiStrings.uploadedVideosStringProperty,
+  videoSourceStrings.downloadVideoStringProperty,
+  videoSourceStrings.openVideoFileStringProperty,
+  videoSourceStrings.recordWebcamStringProperty,
+  videoPlayerA11y.toggleVideoVisibilityStringProperty,
+  trackLabModel.sources.webcamRecordingsProperty,
+  trackLabModel.sources.uploadedVideosProperty,
+  trackLabModel.sources.isUserVideoProperty,
+  trackLabModel.playback.isPlayingProperty,
+  trackLabModel.playback.frameRateProperty,
+  sourceVideoContentVisibleProperty,
+  sourceVideoLoadedProperty,
+  // The WebcamPanel it creates.
+  ...webcamPanelLinkedProperties.filter((property) => property !== webcamFrameRateProperty),
+];
+
+const createVideoSourceControlNode = () =>
+  new VideoSourceControlNode(
+    trackLabModel.sources,
+    trackLabModel.playback.isPlayingProperty,
+    trackLabModel,
+    trackLabModel.playback.frameRateProperty,
+    sourceListParent,
+    noop,
+    noop,
+    sourceVideoContentVisibleProperty,
+    sourceVideoLoadedProperty,
+  );
+
+/** Sim-lifetime Properties VideoPlayerNode links to, itself and through the components it owns. */
+const videoPlayerLinkedProperties: readonly object[] = [
+  videoPlayerA11y.videoPlayerStringProperty,
+  videoPlayerA11y.videoPanelHandleStringProperty,
+  videoPlayerA11y.videoPanelResizeHandleStringProperty,
+  stringManager.getVideo().loadFailedStringProperty,
+  trackLabModel.overlayTools.videoContentVisibleProperty,
+  trackLabModel.overlayTools.autoTrackingProperty,
+  trackLabModel.playback.videoLoadedProperty,
+  trackLabModel.playback.playbackRateProperty,
+  trackLabModel.playback.panelSizeScaleProperty,
+  trackLabModel.playback.videoTransformProperty,
+  // Linked by hand to style the <video> element and the header / resize handle.
+  TrackLabColors.videoBackgroundColorProperty,
+  TrackLabColors.panelHeaderColorProperty,
+  TrackLabColors.resizeHandleColorProperty,
+  // The resize handle's keyboard drag hotkeys derive from these module-level key strings.
+  ...(KeyboardDragDirectionToKeyStringPropertiesMap.get("leftRight") ?? []),
+  ...digitizingOverlayLinkedProperties,
+  ...videoSourceControlLinkedProperties.filter(
+    (property) => property !== sourceVideoContentVisibleProperty && property !== sourceVideoLoadedProperty,
+  ),
+];
+
+const videoPlayerListParent = new Node();
+const createVideoPlayerNode = () => new VideoPlayerNode(trackLabModel, videoPlayerListParent);
+
+/** The node's own <video> element (private; read here to check it is released). */
+function videoElementOf(node: VideoPlayerNode): HTMLVideoElement {
+  return (node as unknown as { videoElement: HTMLVideoElement }).videoElement;
+}
+
+describeDisposalLeaks([
+  {
+    name: "VideoSourceControlNode",
+    create: createVideoSourceControlNode,
+    keepAlive: () => [trackLabModel, sourceListParent, ...videoSourceControlLinkedProperties],
+  },
+  {
+    name: "VideoPlayerNode",
+    create: createVideoPlayerNode,
+    keepAlive: () => [trackLabModel, videoPlayerListParent, ...videoPlayerLinkedProperties],
+  },
+]);
+
+describe("VideoSourceControlNode", () => {
+  it("leaves no listeners on string, accessible-name or model Properties", async () => {
+    await expectNoListenerGrowth(videoSourceControlLinkedProperties, () => {
+      createVideoSourceControlNode().dispose();
+    });
+  });
+
+  it("removes its hidden file input from the document", () => {
+    const before = document.querySelectorAll("input[type=file]").length;
+    const node = createVideoSourceControlNode();
+    expect(document.querySelectorAll("input[type=file]").length).toBe(before + 1);
+    node.dispose();
+    expect(document.querySelectorAll("input[type=file]").length).toBe(before);
+  });
+});
+
+describe("VideoPlayerNode", () => {
+  it("leaves no listeners on string, accessible-name or model Properties", async () => {
+    await expectNoListenerGrowth(videoPlayerLinkedProperties, () => {
+      createVideoPlayerNode().dispose();
+    });
+  });
+
+  it("stops handling document keydown after dispose", () => {
+    const seekToStart = vi.spyOn(trackLabModel.playback, "seekToStart");
+    const { durationProperty } = trackLabModel.playback;
+    const initialDuration = durationProperty.value;
+    try {
+      durationProperty.value = 10; // the Home shortcut only acts once a video is loaded
+      const node = createVideoPlayerNode();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
+      expect(seekToStart).toHaveBeenCalledTimes(1);
+      node.dispose();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
+      expect(seekToStart).toHaveBeenCalledTimes(1);
+    } finally {
+      durationProperty.value = initialDuration;
+      seekToStart.mockRestore();
+    }
+  });
+
+  it("releases its video element and blob URL on dispose", () => {
+    const node = createVideoPlayerNode();
+    const video = videoElementOf(node);
+    video.src = "blob:track-lab-test";
+    // A stand-in for a live MediaStream; dispose() must detach it too.
+    video.srcObject = new MediaStream();
+    (node as unknown as { currentBlobUrl: string | null }).currentBlobUrl = "blob:track-lab-test";
+    const pause = vi.spyOn(video, "pause");
+    const revoke = vi.spyOn(URL, "revokeObjectURL");
+    try {
+      node.dispose();
+      expect(pause).toHaveBeenCalled();
+      expect(video.hasAttribute("src")).toBe(false);
+      expect(video.srcObject).toBeNull();
+      expect(revoke).toHaveBeenCalledWith("blob:track-lab-test");
+    } finally {
+      revoke.mockRestore();
+    }
   });
 });
