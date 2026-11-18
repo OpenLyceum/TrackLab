@@ -6,9 +6,9 @@
  */
 
 import type { TReadOnlyProperty } from "scenerystack/axon";
-import { type Dimension2, type Transform3, Vector2 } from "scenerystack/dot";
+import { Bounds2, type Dimension2, type Transform3, Vector2 } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
-import { DOM, FireListener, KeyboardListener, Node, Path, Rectangle } from "scenerystack/scenery";
+import { CanvasNode, FireListener, KeyboardListener, Node, Path, Rectangle } from "scenerystack/scenery";
 import { Tandem } from "scenerystack/tandem";
 import { StringManager } from "../../i18n/StringManager.js";
 import TrackLabColors, { getTrackColor } from "../../TrackLabColors.js";
@@ -59,6 +59,101 @@ const MAG_SHADOW_OFFSET_X = 0; // px, horizontal shadow offset
 const MAG_SHADOW_OFFSET_Y = 2; // px, vertical shadow offset
 const MAG_SHADOW_BLUR = 8; // px, shadow blur radius
 
+/** Room around the lens for the drop shadow, which paints outside the circle. */
+const MAG_SHADOW_PAD = MAG_SHADOW_BLUR + Math.abs(MAG_SHADOW_OFFSET_X) + Math.abs(MAG_SHADOW_OFFSET_Y);
+
+/**
+ * Circular, zoomed view of the video around the cursor. Painted through scenery's
+ * CanvasNode (not a bare DOM canvas) so it stays in the scene graph and layout like
+ * every other node; colors are read from TrackLabColors at paint time.
+ */
+class MagnifierNode extends CanvasNode {
+  private readonly videoElement: HTMLVideoElement;
+  private sourceX = 0;
+  private sourceY = 0;
+  private sourceWidth = 0;
+  private sourceHeight = 0;
+  private crosshairX = MAG_SIZE / 2;
+  private crosshairY = MAG_SIZE / 2;
+
+  public constructor(videoElement: HTMLVideoElement) {
+    super({
+      canvasBounds: new Bounds2(-MAG_SHADOW_PAD, -MAG_SHADOW_PAD, MAG_SIZE + MAG_SHADOW_PAD, MAG_SIZE + MAG_SHADOW_PAD),
+      visible: false,
+      pickable: false,
+    });
+    this.videoElement = videoElement;
+  }
+
+  /** Show the video region (sx, sy, width, height), with the crosshair at a lens-local point. */
+  public setView(sx: number, sy: number, width: number, height: number, crosshairX: number, crosshairY: number): void {
+    this.sourceX = sx;
+    this.sourceY = sy;
+    this.sourceWidth = width;
+    this.sourceHeight = height;
+    this.crosshairX = crosshairX;
+    this.crosshairY = crosshairY;
+    this.invalidatePaint();
+  }
+
+  public override paintCanvas(context: CanvasRenderingContext2D): void {
+    const radius = MAG_SIZE / 2;
+    const borderColor = TrackLabColors.digitizingMagnifierBorderProperty.value.toCSS();
+
+    // Drop shadow under the lens (formerly a CSS box-shadow on the DOM canvas).
+    context.save();
+    context.shadowColor = TrackLabColors.digitizingMagnifierShadowProperty.value.toCSS();
+    context.shadowBlur = MAG_SHADOW_BLUR;
+    context.shadowOffsetX = MAG_SHADOW_OFFSET_X;
+    context.shadowOffsetY = MAG_SHADOW_OFFSET_Y;
+    context.fillStyle = borderColor;
+    context.beginPath();
+    context.arc(radius, radius, radius, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+
+    context.save();
+    context.beginPath();
+    context.arc(radius, radius, radius, 0, Math.PI * 2);
+    context.clip();
+    if (this.sourceWidth > 0 && this.sourceHeight > 0) {
+      context.drawImage(
+        this.videoElement,
+        this.sourceX,
+        this.sourceY,
+        this.sourceWidth,
+        this.sourceHeight,
+        0,
+        0,
+        MAG_SIZE,
+        MAG_SIZE,
+      );
+    }
+    context.restore();
+
+    context.strokeStyle = borderColor;
+    context.lineWidth = MAG_BORDER_WIDTH;
+    context.beginPath();
+    context.arc(radius, radius, radius - MAG_BORDER_WIDTH / 2, 0, Math.PI * 2);
+    context.stroke();
+
+    const x = this.crosshairX;
+    const y = this.crosshairY;
+    context.strokeStyle = TrackLabColors.digitizingMagnifierCrosshairProperty.value.toCSS();
+    context.lineWidth = MAG_CROSSHAIR_LINE_WIDTH;
+    context.beginPath();
+    context.moveTo(x - MAG_CROSSHAIR_RADIUS, y);
+    context.lineTo(x - MAG_CROSSHAIR_GAP, y);
+    context.moveTo(x + MAG_CROSSHAIR_GAP, y);
+    context.lineTo(x + MAG_CROSSHAIR_RADIUS, y);
+    context.moveTo(x, y - MAG_CROSSHAIR_RADIUS);
+    context.lineTo(x, y - MAG_CROSSHAIR_GAP);
+    context.moveTo(x, y + MAG_CROSSHAIR_GAP);
+    context.lineTo(x, y + MAG_CROSSHAIR_RADIUS);
+    context.stroke();
+  }
+}
+
 /**
  * Manual digitizing overlay for placing track points on the video.
  * Renders a custom crosshair cursor and magnifier, and places dots on click.
@@ -70,11 +165,6 @@ export class DigitizingOverlayNode extends Node {
     super();
 
     const { tracking, playback, magnifyVideoProperty, modelViewTransformProperty } = options;
-
-    // Cached CSS color strings for canvas drawing (updated via property links)
-    let magBorderColor = TrackLabColors.digitizingMagnifierBorderProperty.value.toCSS();
-    let magCrosshairColor = TrackLabColors.digitizingMagnifierCrosshairProperty.value.toCSS();
-    let magShadowColor = TrackLabColors.digitizingMagnifierShadowProperty.value.toCSS();
 
     // Custom cursor: circle + 4 crosshair segments that stop at an empty centre.
     // Built as a single composite shape shared by both layers so positions are
@@ -106,43 +196,13 @@ export class DigitizingOverlayNode extends Node {
     });
 
     // ── Magnifier (zoomed view near the cursor) ─────────────────────────────
-    const magCanvas = document.createElement("canvas");
-    magCanvas.width = MAG_SIZE;
-    magCanvas.height = MAG_SIZE;
-    Object.assign(magCanvas.style, {
-      borderRadius: "50%",
-    });
+    const magnifierNode = new MagnifierNode(videoElement);
 
-    // Update shadow style when color property changes
-    const updateShadowStyle = () => {
-      magCanvas.style.boxShadow = `${MAG_SHADOW_OFFSET_X}px ${MAG_SHADOW_OFFSET_Y}px ${MAG_SHADOW_BLUR}px ${magShadowColor}`;
-    };
-    updateShadowStyle();
-
-    const magBorderListener = (color: import("scenerystack").Color) => {
-      magBorderColor = color.toCSS();
-    };
-    TrackLabColors.digitizingMagnifierBorderProperty.link(magBorderListener);
-
-    const magCrosshairListener = (color: import("scenerystack").Color) => {
-      magCrosshairColor = color.toCSS();
-    };
-    TrackLabColors.digitizingMagnifierCrosshairProperty.link(magCrosshairListener);
-
-    const magShadowListener = (color: import("scenerystack").Color) => {
-      magShadowColor = color.toCSS();
-      updateShadowStyle();
-    };
-    TrackLabColors.digitizingMagnifierShadowProperty.link(magShadowListener);
-
-    const magCtx = magCanvas.getContext("2d");
-    if (!magCtx) {
-      throw new Error("Could not get 2D context from magnifier canvas");
-    }
-
-    const magnifierNode = new DOM(magCanvas, { allowInput: false });
-    magnifierNode.visible = false;
-    magnifierNode.pickable = false;
+    // The lens reads its colors at paint time; repaint when a profile color changes.
+    const repaintMagnifier = () => magnifierNode.invalidatePaint();
+    TrackLabColors.digitizingMagnifierBorderProperty.lazyLink(repaintMagnifier);
+    TrackLabColors.digitizingMagnifierCrosshairProperty.lazyLink(repaintMagnifier);
+    TrackLabColors.digitizingMagnifierShadowProperty.lazyLink(repaintMagnifier);
 
     // Track the last known cursor position so the magnifier can be redrawn
     // when the video frame changes without mouse movement.
@@ -216,35 +276,7 @@ export class DigitizingOverlayNode extends Node {
       const sx = videoX - srcW / 2;
       const sy = videoY - srcH / 2;
 
-      magCtx.clearRect(0, 0, MAG_SIZE, MAG_SIZE);
-      magCtx.save();
-
-      magCtx.beginPath();
-      magCtx.arc(MAG_SIZE / 2, MAG_SIZE / 2, MAG_SIZE / 2, 0, Math.PI * 2);
-      magCtx.clip();
-
-      magCtx.drawImage(videoElement, sx, sy, srcW, srcH, 0, 0, MAG_SIZE, MAG_SIZE);
-
-      magCtx.restore();
-
-      magCtx.strokeStyle = magBorderColor;
-      magCtx.lineWidth = MAG_BORDER_WIDTH;
-      magCtx.beginPath();
-      magCtx.arc(MAG_SIZE / 2, MAG_SIZE / 2, MAG_SIZE / 2 - MAG_BORDER_WIDTH / 2, 0, Math.PI * 2);
-      magCtx.stroke();
-
-      magCtx.strokeStyle = magCrosshairColor;
-      magCtx.lineWidth = MAG_CROSSHAIR_LINE_WIDTH;
-      magCtx.beginPath();
-      magCtx.moveTo(crosshairX - MAG_CROSSHAIR_RADIUS, crosshairY);
-      magCtx.lineTo(crosshairX - MAG_CROSSHAIR_GAP, crosshairY);
-      magCtx.moveTo(crosshairX + MAG_CROSSHAIR_GAP, crosshairY);
-      magCtx.lineTo(crosshairX + MAG_CROSSHAIR_RADIUS, crosshairY);
-      magCtx.moveTo(crosshairX, crosshairY - MAG_CROSSHAIR_RADIUS);
-      magCtx.lineTo(crosshairX, crosshairY - MAG_CROSSHAIR_GAP);
-      magCtx.moveTo(crosshairX, crosshairY + MAG_CROSSHAIR_GAP);
-      magCtx.lineTo(crosshairX, crosshairY + MAG_CROSSHAIR_RADIUS);
-      magCtx.stroke();
+      magnifierNode.setView(sx, sy, srcW, srcH, crosshairX, crosshairY);
     };
 
     const a11yStrings = StringManager.getInstance().getA11y();
@@ -447,9 +479,9 @@ export class DigitizingOverlayNode extends Node {
     // Store cleanup function
     this.disposeDigitizingOverlay = () => {
       videoElement.removeEventListener("loadedmetadata", onMetadata);
-      TrackLabColors.digitizingMagnifierBorderProperty.unlink(magBorderListener);
-      TrackLabColors.digitizingMagnifierCrosshairProperty.unlink(magCrosshairListener);
-      TrackLabColors.digitizingMagnifierShadowProperty.unlink(magShadowListener);
+      TrackLabColors.digitizingMagnifierBorderProperty.unlink(repaintMagnifier);
+      TrackLabColors.digitizingMagnifierCrosshairProperty.unlink(repaintMagnifier);
+      TrackLabColors.digitizingMagnifierShadowProperty.unlink(repaintMagnifier);
       playback.videoDimensionsProperty.unlink(videoDimensionsListener);
       playback.currentTimeProperty.unlink(currentTimeListener);
       tracking.tracksProperty.unlink(tracksListener);
