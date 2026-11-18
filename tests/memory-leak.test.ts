@@ -8,7 +8,9 @@
  */
 
 import { BooleanProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
+import type { Node } from "scenerystack/scenery";
 import { describe, expect, it } from "vitest";
+import { StringManager } from "../src/i18n/StringManager.js";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
 import { OverlayToolsModel } from "../src/track-lab/model/OverlayToolsModel.js";
@@ -18,7 +20,8 @@ import { AngleToolNode } from "../src/track-lab/view/AngleToolNode.js";
 import { CoordinateSystemNode } from "../src/track-lab/view/CoordinateSystemNode.js";
 import { MeasuringTapeNode } from "../src/track-lab/view/MeasuringTapeNode.js";
 import { PlaybackControlsNode } from "../src/track-lab/view/PlaybackControlsNode.js";
-import { describeDisposalLeaks, forceGC } from "./helpers/memoryLeak.js";
+import { TrackListPanel } from "../src/track-lab/view/TrackListPanel.js";
+import { describeDisposalLeaks, expectNoListenerGrowth, forceGC } from "./helpers/memoryLeak.js";
 
 // Named separately from the array so callers can reference them without an
 // index lookup, which under noUncheckedIndexedAccess would widen to
@@ -165,4 +168,80 @@ describeDisposalLeaks([
     create: () => new CoordinateSystemNode(videoLoadedProperty, overlayTools, sharedTracking.activeTrackIdProperty),
     keepAlive: () => [videoLoadedProperty, overlayTools, sharedTracking],
   },
+  {
+    name: "TrackListPanel",
+    create: () => {
+      sharedTracking.addTrack();
+      return new TrackListPanel(sharedTracking, videoLoadedProperty);
+    },
+    keepAlive: () => [videoLoadedProperty, sharedTracking],
+  },
 ]);
+
+// TrackListPanel rebuilds every TrackRowNode whenever a track is added or removed. Each row
+// links to activeTrackIdProperty and derives its checkbox / trash-button accessible names
+// from the global a11y string Properties, so a row that is replaced without disposal leaks.
+// memory-leak-covers: TrackRowNode (private row owned by TrackListPanel)
+describe("TrackRowNode rebuilds in TrackListPanel", () => {
+  const a11yStrings = StringManager.getInstance().getA11y();
+
+  /** The TrackRowNode instances currently in the panel (the class is private to TrackListPanel). */
+  function trackRows(root: Node): Node[] {
+    const rows: Node[] = [];
+    const visit = (node: Node): void => {
+      if (node.constructor.name === "TrackRowNode") {
+        rows.push(node);
+      }
+      node.children.forEach(visit);
+    };
+    visit(root);
+    return rows;
+  }
+
+  /** Add two tracks, digitize one, then remove both: three rebuilds of the row list. */
+  function addAndRemoveTracks(tracking: TrackingModel): void {
+    tracking.addTrack();
+    tracking.addTrack();
+    const [first, second] = tracking.tracksProperty.value;
+    tracking.activeTrackIdProperty.value = first!.id;
+    tracking.removeTrack(first!.id);
+    tracking.removeTrack(second!.id);
+  }
+
+  it("add/remove cycles leave no listeners on string or model Properties", async () => {
+    const tracking = new TrackingModel();
+    const panel = new TrackListPanel(tracking, videoLoadedProperty);
+    tracking.addTrack(); // a surviving row is rebuilt on every change, too
+    await expectNoListenerGrowth(
+      [
+        a11yStrings.digitizeTrackStringProperty,
+        a11yStrings.removeTrackStringProperty,
+        tracking.activeTrackIdProperty,
+        tracking.tracksProperty,
+      ],
+      () => addAndRemoveTracks(tracking),
+    );
+    expect(trackRows(panel)).toHaveLength(1);
+    panel.dispose();
+  });
+
+  it("replaced rows are garbage-collected while the panel and model stay alive", async () => {
+    const tracking = new TrackingModel();
+    const panel = new TrackListPanel(tracking, videoLoadedProperty);
+    const collectReplacedRows = (): WeakRef<object>[] => {
+      const refs: WeakRef<object>[] = [];
+      for (let i = 0; i < 3; i++) {
+        tracking.addTrack();
+        refs.push(...trackRows(panel).map((row) => new WeakRef<object>(row)));
+        tracking.removeTrack(tracking.tracksProperty.value.at(-1)!.id);
+      }
+      return refs;
+    };
+    const refs = collectReplacedRows();
+    expect(refs.length).toBeGreaterThan(0);
+    await forceGC(refs);
+    expect(refs.filter((ref) => ref.deref() !== undefined).length, "replaced TrackRowNodes retained").toBe(0);
+    expect(trackRows(panel)).toHaveLength(0);
+    panel.dispose();
+  });
+});

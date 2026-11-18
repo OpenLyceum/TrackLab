@@ -55,8 +55,6 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 - `memory-leak:CalibrationToolNode` — overlay tool needs a laid-out video boundsProperty; constructor fails under happy-dom without it.
 - `memory-leak:ConfigurableGraph` — ComboBox / chart Text retain via sim-lifetime StringManager Properties after dispose.
 - `memory-leak:KinematicsGraphNode` — graph chrome retains via StringManager / preferences Properties after dispose.
-- `memory-leak:TrackListPanel` — panel / TrackRowNode chrome retains via StringManager Properties after dispose.
-- `memory-leak:TrackRowNode` — private row owned by TrackListPanel.
 - **Domain clock:** `VideoPlaybackModel` drives video timing/scrubbing instead of composing fleet-standard `TimeModel`.
 - `vite.config.ts`: sim-specific, not the template's copy (no `sim.config.json`), for the plugins, caching and policies in the next two bullets.
   It mirrors the template's `cspMetaTag()` plugin so the CSP also applies on GitHub Pages; keep the two in step.
@@ -71,7 +69,7 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 | `vitest.config.ts` | `happy-dom` environment, `setupFiles`, `execArgv: ["--expose-gc"]` |
 | `tests/setup.ts` | Canvas / AudioContext mocks + `init({ name: "…" })` before SceneryStack imports |
 | `tests/**/*.test.ts` | Model/physics unit tests — mirror `src/` under `tests/` |
-| `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression (fleet pattern) |
+| `tests/memory-leak.test.ts` | WeakRef + `forceGC` dispose regression (fleet pattern); TrackRowNode rebuilds on track add/remove through a live `TrackListPanel` |
 | `tsconfig.test.json` | Typecheck config for `tests/` (adds `node` types), run by `npm run check` |
 
 Actual specs:

@@ -251,6 +251,7 @@ export class TrackListPanel extends Panel {
       }
       addButtonEnabledProperty.dispose();
       addButton.dispose();
+      headerLabel.dispose();
     };
   }
 
