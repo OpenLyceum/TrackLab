@@ -7,20 +7,26 @@
  * a block scope) so local strong references die when the helper returns.
  */
 
-import { BooleanProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
+import { BooleanProperty, NumberProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
 import type { Node } from "scenerystack/scenery";
 import { describe, expect, it } from "vitest";
 import { StringManager } from "../src/i18n/StringManager.js";
+import TrackLabColors from "../src/TrackLabColors.js";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
 import { OverlayToolsModel } from "../src/track-lab/model/OverlayToolsModel.js";
 import { TrackingModel } from "../src/track-lab/model/TrackingModel.js";
+import { TrackLabModel } from "../src/track-lab/model/TrackLabModel.js";
 import { VideoPlaybackModel } from "../src/track-lab/model/VideoPlaybackModel.js";
 import { AngleToolNode } from "../src/track-lab/view/AngleToolNode.js";
+import { AutoTrackerNode } from "../src/track-lab/view/AutoTrackerNode.js";
 import { CoordinateSystemNode } from "../src/track-lab/view/CoordinateSystemNode.js";
+import { DataTableNode } from "../src/track-lab/view/DataTableNode.js";
+import { DigitizingOverlayNode } from "../src/track-lab/view/DigitizingOverlayNode.js";
 import { MeasuringTapeNode } from "../src/track-lab/view/MeasuringTapeNode.js";
 import { PlaybackControlsNode } from "../src/track-lab/view/PlaybackControlsNode.js";
 import { TrackListPanel } from "../src/track-lab/view/TrackListPanel.js";
+import { WebcamPanel } from "../src/track-lab/view/WebcamPanel.js";
 import { describeDisposalLeaks, expectNoListenerGrowth, forceGC } from "./helpers/memoryLeak.js";
 
 // Named separately from the array so callers can reference them without an
@@ -146,7 +152,121 @@ const sharedTracking = new TrackingModel();
 const sharedVideoElement = document.createElement("video");
 const videoLoadedProperty = new BooleanProperty(true);
 
+// The video-panel components are built as VideoPlayerNode and TrackLabScreenView build them,
+// against a TrackLabModel, a video element and string Properties that all outlive them.
+const trackLabModel = new TrackLabModel();
+const componentVideoElement = document.createElement("video");
+const autoTrackingShownProperty = new BooleanProperty(true);
+const webcamFrameRateProperty = new NumberProperty(30);
+const stringManager = StringManager.getInstance();
+const autoTrackerStrings = stringManager.getAutoTracker();
+const dataTableStrings = stringManager.getDataTable();
+const webcamStrings = stringManager.getWebcam();
+const trackLabA11y = stringManager.getA11yStrings();
+
+/** Sim-lifetime string, accessible-name and model Properties each component links to. */
+const autoTrackerLinkedProperties: readonly object[] = [
+  autoTrackerStrings.videoTrackingAreaStringProperty,
+  autoTrackerStrings.dragToSelectStringProperty,
+  autoTrackingShownProperty,
+  trackLabModel.playback.videoDimensionsProperty,
+];
+const digitizingOverlayLinkedProperties: readonly object[] = [
+  trackLabA11y.digitizingAreaStringProperty,
+  trackLabModel.playback.videoDimensionsProperty,
+  trackLabModel.playback.currentTimeProperty,
+  trackLabModel.playback.frameRateProperty,
+  trackLabModel.tracking.tracksProperty,
+  trackLabModel.tracking.activeTrackIdProperty,
+  trackLabModel.overlayTools.modelViewTransformProperty,
+  trackLabModel.overlayTools.magnifyVideoProperty,
+  // Linked by hand to repaint the magnifier canvas, so counted even without a Display.
+  TrackLabColors.digitizingMagnifierBorderProperty,
+  TrackLabColors.digitizingMagnifierCrosshairProperty,
+  TrackLabColors.digitizingMagnifierShadowProperty,
+];
+const dataTableLinkedProperties: readonly object[] = [
+  dataTableStrings.titleStringProperty,
+  dataTableStrings.csvStringProperty,
+  dataTableStrings.frameStringProperty,
+  dataTableStrings.noDataStringProperty,
+  trackLabA11y.exportCSVStringProperty,
+  trackLabA11y.dataTableStringProperty,
+  trackLabA11y.tableResizeTopLeftStringProperty,
+  trackLabA11y.tableResizeTopRightStringProperty,
+  trackLabA11y.tableResizeBottomLeftStringProperty,
+  trackLabA11y.tableResizeBottomRightStringProperty,
+  trackLabModel.tracking.tracksProperty,
+  trackLabModel.playback.currentFrameProperty,
+  trackLabModel.playback.videoLoadedProperty,
+  trackLabModel.overlayTools.calibUnitProperty,
+  TrackLabColors.tableHeaderBackgroundProperty,
+];
+const webcamPanelLinkedProperties: readonly object[] = [
+  webcamStrings.cancelStringProperty,
+  webcamStrings.startRecordingStringProperty,
+  webcamStrings.stopRecordingStringProperty,
+  webcamStrings.reRecordStringProperty,
+  webcamStrings.useVideoStringProperty,
+  webcamStrings.cameraStringProperty,
+  webcamStrings.recordFromWebcamStringProperty,
+  stringManager.getUI().fpsStringProperty,
+  webcamFrameRateProperty,
+  // Linked by hand to style the preview and review <video> elements.
+  TrackLabColors.videoBackgroundColorProperty,
+];
+
+const createAutoTrackerNode = () =>
+  new AutoTrackerNode(componentVideoElement, autoTrackingShownProperty, {
+    tracking: trackLabModel.tracking,
+    videoDimensionsProperty: trackLabModel.playback.videoDimensionsProperty,
+    timeToFrame: (time: number) => trackLabModel.playback.timeToFrame(time),
+    modelViewTransformProperty: trackLabModel.overlayTools.modelViewTransformProperty,
+  });
+const createDigitizingOverlayNode = () =>
+  new DigitizingOverlayNode(
+    componentVideoElement,
+    {
+      tracking: trackLabModel.tracking,
+      playback: trackLabModel.playback,
+      magnifyVideoProperty: trackLabModel.overlayTools.magnifyVideoProperty,
+      modelViewTransformProperty: trackLabModel.overlayTools.modelViewTransformProperty,
+      recordPoint: noop,
+      erasePoint: noop,
+    },
+    noop,
+  );
+const createDataTableNode = () =>
+  new DataTableNode(
+    trackLabModel.tracking,
+    trackLabModel.playback,
+    trackLabModel.playback.videoLoadedProperty,
+    trackLabModel.overlayTools.calibUnitProperty,
+  );
+const createWebcamPanel = () =>
+  new WebcamPanel({ frameRateProperty: webcamFrameRateProperty, onVideoReady: noop, onCancel: noop });
+
 describeDisposalLeaks([
+  {
+    name: "AutoTrackerNode",
+    create: createAutoTrackerNode,
+    keepAlive: () => [trackLabModel, componentVideoElement, ...autoTrackerLinkedProperties],
+  },
+  {
+    name: "DigitizingOverlayNode",
+    create: createDigitizingOverlayNode,
+    keepAlive: () => [trackLabModel, componentVideoElement, ...digitizingOverlayLinkedProperties],
+  },
+  {
+    name: "DataTableNode",
+    create: createDataTableNode,
+    keepAlive: () => [trackLabModel, ...dataTableLinkedProperties],
+  },
+  {
+    name: "WebcamPanel",
+    create: createWebcamPanel,
+    keepAlive: () => webcamPanelLinkedProperties,
+  },
   {
     name: "MeasuringTapeNode",
     create: () => new MeasuringTapeNode(overlayTools.measuringTapeVisibleProperty, overlayTools),
@@ -243,5 +363,18 @@ describe("TrackRowNode rebuilds in TrackListPanel", () => {
     expect(refs.filter((ref) => ref.deref() !== undefined).length, "replaced TrackRowNodes retained").toBe(0);
     expect(trackRows(panel)).toHaveLength(0);
     panel.dispose();
+  });
+});
+
+describe("video-panel components leave no listeners on string, accessible-name or model Properties", () => {
+  it.each([
+    ["AutoTrackerNode", createAutoTrackerNode, autoTrackerLinkedProperties],
+    ["DigitizingOverlayNode", createDigitizingOverlayNode, digitizingOverlayLinkedProperties],
+    ["DataTableNode", createDataTableNode, dataTableLinkedProperties],
+    ["WebcamPanel", createWebcamPanel, webcamPanelLinkedProperties],
+  ] as const)("%s", async (_name, create, linkedProperties) => {
+    await expectNoListenerGrowth(linkedProperties, () => {
+      create().dispose();
+    });
   });
 });

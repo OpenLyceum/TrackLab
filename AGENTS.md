@@ -50,7 +50,7 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 
 ## Compliance carve-outs
 
-- `memory-leak:DigitizingAwareOverlayNode` — abstract overlay base; dispose coverage is via CoordinateSystemNode.
+- `memory-leak:VideoPlayerNode` — sim-lifetime root of the video panel, built once by `TrackLabScreenView`, which joist never disposes. It owns the `<video>` element and a document `keydown` listener. Its teardown also relies on `VideoSourceControlNode`, which has no `dispose()`. The components under it (`AutoTrackerNode`, `DigitizingOverlayNode`, `PlaybackControlsNode`, `WebcamPanel`) have their own cases.
 - `memory-leak:OpenCVTracker` — OpenCV worker tracker; needs a WASM worker and video frames to exercise dispose.
 - `memory-leak:CalibrationToolNode` — overlay tool needs a laid-out video boundsProperty; constructor fails under happy-dom without it.
 - `memory-leak:ConfigurableGraph` — ComboBox / chart Text retain via sim-lifetime StringManager Properties after dispose.

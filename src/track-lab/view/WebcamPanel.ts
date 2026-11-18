@@ -8,7 +8,7 @@
 import type { NumberProperty } from "scenerystack/axon";
 import { Property } from "scenerystack/axon";
 import { Shape } from "scenerystack/kite";
-import { DOM, HBox, Node, Path, Text, VBox } from "scenerystack/scenery";
+import { type Color, DOM, HBox, Node, Path, Text, VBox } from "scenerystack/scenery";
 import { CloseButton, PhetFont, RefreshButton, StopIconShape } from "scenerystack/scenery-phet";
 import { ButtonNode, cameraSolidShape, checkSolidShape, NumberPicker, Panel } from "scenerystack/sun";
 import { Tandem } from "scenerystack/tandem";
@@ -104,9 +104,11 @@ export class WebcamPanel extends Node {
     this.previewElement.muted = true;
     this.previewElement.playsInline = true;
     this.previewElement.style.display = "block";
-    TrackLabColors.videoBackgroundColorProperty.link((c) => {
+    // Linked by hand (a DOM style, not a scenery fill), so dispose() must unlink it.
+    const videoBackgroundListener = (c: Color): void => {
       this.previewElement.style.background = c.toCSS();
-    });
+      this.reviewElement.style.background = c.toCSS();
+    };
     const previewDom = new DOM(this.previewElement, { allowInput: false });
 
     // ── Review video ──────────────────────────────────────────────────────
@@ -116,9 +118,8 @@ export class WebcamPanel extends Node {
     this.reviewElement.controls = true;
     this.reviewElement.playsInline = true;
     this.reviewElement.style.display = "block";
-    TrackLabColors.videoBackgroundColorProperty.link((c) => {
-      this.reviewElement.style.background = c.toCSS();
-    });
+    TrackLabColors.videoBackgroundColorProperty.link(videoBackgroundListener);
+    this.videoBackgroundListener = videoBackgroundListener;
     const reviewDom = new DOM(this.reviewElement, { allowInput: true });
 
     // ── Status ────────────────────────────────────────────────────────────
@@ -271,10 +272,18 @@ export class WebcamPanel extends Node {
 
     // keep button refs for toggling
     this._startButton = startButton;
+    this.panelContent = content;
     this._stopButton = stopButton;
   }
 
   private readonly _startButton: ReturnType<typeof createTrackLabButton>;
+  /**
+   * Disposed with the panel: its buttons, icons and labels link to sim-lifetime string
+   * and accessible-name Properties, the fps picker to frameRateProperty, and
+   * Panel.dispose() does not dispose its content.
+   */
+  private readonly panelContent: Node;
+  private readonly videoBackgroundListener: (c: Color) => void;
   private readonly _stopButton: ReturnType<typeof createTrackLabButton>;
   private readonly webcamStrings: ReturnType<StringManager["getWebcam"]>;
 
@@ -504,6 +513,8 @@ export class WebcamPanel extends Node {
 
   public override dispose(): void {
     this.cleanup();
+    TrackLabColors.videoBackgroundColorProperty.unlink(this.videoBackgroundListener);
+    this.panelContent.disposeSubtree();
     super.dispose();
   }
 }

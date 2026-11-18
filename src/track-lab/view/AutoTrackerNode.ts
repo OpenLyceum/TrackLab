@@ -351,6 +351,9 @@ export class AutoTrackerNode extends Node {
       autoTrackingShownProperty.unlink(autoTrackingShownListener);
       videoDimensionsProperty.unlink(videoDimensionsListener);
       this.tracking.resetTracker();
+      // Both link to sim-lifetime string Properties (accessible name, hint).
+      hitArea.dispose();
+      this.hintText.dispose();
     };
   }
 

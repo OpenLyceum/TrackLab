@@ -494,6 +494,8 @@ export class DigitizingOverlayNode extends Node {
       }
       trackPaths.clear();
       currentMarkRing.dispose();
+      // Links to a sim-lifetime accessible-name Property.
+      digitizingOverlay.dispose();
     };
   }
 

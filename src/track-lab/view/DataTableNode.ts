@@ -123,44 +123,42 @@ export class DataTableNode extends Node {
     resizeObserver.observe(tableRenderer.wrapper);
 
     // ── Export button ─────────────────────────────────────────────────────────
-    const exportButton = createTrackLabButton(
-      new HBox({
-        children: [
-          makeDownloadIcon(),
-          new Text(dataTableStrings.csvStringProperty, {
-            font: new PhetFont({ size: EXPORT_BUTTON_FONT_SIZE, weight: "bold" }),
-            fill: TrackLabColors.textOnDarkProperty,
-          }),
-        ],
-        spacing: EXPORT_BUTTON_ICON_SPACING,
-      }),
-      {
-        accessibleName: a11yStrings.exportCSVStringProperty,
-        baseColor: TrackLabColors.exportButtonProperty,
-        listener: () => {
-          const tracks = tracking.tracksProperty.value;
-          const unit = unitProperty.value;
-          const csv = generateCsv(tracks, unit, getLabels());
-          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `export${this.exportCounter}.csv`;
-          // The anchor must be in the document for the synthetic click to start
-          // a download in Firefox, and the object URL must outlive the click:
-          // revoking it synchronously cancels the download in some browsers.
-          // Wall-clock setTimeout is deliberate here — this is browser download
-          // plumbing, not simulation time, so it must not follow the sim clock.
-          document.body.appendChild(link);
-          link.click();
-          setTimeout(() => {
-            link.remove();
-            URL.revokeObjectURL(url);
-          }, 0);
-          this.exportCounter++;
-        },
+    const exportButtonContent = new HBox({
+      children: [
+        makeDownloadIcon(),
+        new Text(dataTableStrings.csvStringProperty, {
+          font: new PhetFont({ size: EXPORT_BUTTON_FONT_SIZE, weight: "bold" }),
+          fill: TrackLabColors.textOnDarkProperty,
+        }),
+      ],
+      spacing: EXPORT_BUTTON_ICON_SPACING,
+    });
+    const exportButton = createTrackLabButton(exportButtonContent, {
+      accessibleName: a11yStrings.exportCSVStringProperty,
+      baseColor: TrackLabColors.exportButtonProperty,
+      listener: () => {
+        const tracks = tracking.tracksProperty.value;
+        const unit = unitProperty.value;
+        const csv = generateCsv(tracks, unit, getLabels());
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `export${this.exportCounter}.csv`;
+        // The anchor must be in the document for the synthetic click to start
+        // a download in Firefox, and the object URL must outlive the click:
+        // revoking it synchronously cancels the download in some browsers.
+        // Wall-clock setTimeout is deliberate here — this is browser download
+        // plumbing, not simulation time, so it must not follow the sim clock.
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          link.remove();
+          URL.revokeObjectURL(url);
+        }, 0);
+        this.exportCounter++;
       },
-    );
+    });
 
     // ── Title row ─────────────────────────────────────────────────────────────
     const titleLabel = new Text(dataTableStrings.titleStringProperty, {
@@ -259,6 +257,9 @@ export class DataTableNode extends Node {
       { cursor: "nwse-resize", accessibleName: a11yStrings.tableResizeBottomRightStringProperty },
     ] as const;
 
+    // Disposed with the table: the keyboard half of each RichDragListener derives its
+    // hotkeys from global key strings.
+    const resizeListeners: RichDragListener[] = [];
     resizeCorners.forEach(({ cursor, accessibleName }, cornerIndex) => {
       const handle = new Rectangle(
         0,
@@ -320,82 +321,82 @@ export class DataTableNode extends Node {
         }
       };
 
-      handle.addInputListener(
-        new RichDragListener({
-          dragListenerOptions: {
-            start: (event) => {
-              handle.focus();
-              dragStartState = {
-                maxWidth: this.tableRenderer.getMaxWidth(),
-                maxHeight: this.tableRenderer.getMaxHeight(),
-                nodeX: this.x,
-                nodeY: this.y,
-              };
-              dragStartPointerPoint = event.pointer.point.copy();
-              this.isResizingProperty.value = true;
-            },
-            drag: (event) => {
-              if (!(dragStartState && dragStartPointerPoint)) {
-                return;
-              }
-              const delta = event.pointer.point.minus(dragStartPointerPoint);
-              let newMaxWidth = dragStartState.maxWidth;
-              let newMaxHeight = dragStartState.maxHeight;
-              let deltaX = 0;
-              let deltaY = 0;
-
-              switch (cornerIndex) {
-                case 0: // Top-left
-                  newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth - delta.x);
-                  newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight - delta.y);
-                  deltaX = dragStartState.maxWidth - newMaxWidth;
-                  deltaY = dragStartState.maxHeight - newMaxHeight;
-                  break;
-                case 1: // Top-right
-                  newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth + delta.x);
-                  newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight - delta.y);
-                  deltaY = dragStartState.maxHeight - newMaxHeight;
-                  break;
-                case 2: // Bottom-left
-                  newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth - delta.x);
-                  newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight + delta.y);
-                  deltaX = dragStartState.maxWidth - newMaxWidth;
-                  break;
-                case 3: // Bottom-right
-                  newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth + delta.x);
-                  newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight + delta.y);
-                  break;
-              }
-
-              this.tableRenderer.applyDimensions(newMaxWidth, newMaxHeight);
-
-              if (deltaX !== 0 || deltaY !== 0) {
-                this.x = dragStartState.nodeX + deltaX;
-                this.y = dragStartState.nodeY + deltaY;
-              }
-            },
-            end: () => {
-              dragStartState = null;
-              dragStartPointerPoint = null;
-              this.isResizingProperty.value = false;
-            },
+      const resizeListener = new RichDragListener({
+        dragListenerOptions: {
+          start: (event) => {
+            handle.focus();
+            dragStartState = {
+              maxWidth: this.tableRenderer.getMaxWidth(),
+              maxHeight: this.tableRenderer.getMaxHeight(),
+              nodeX: this.x,
+              nodeY: this.y,
+            };
+            dragStartPointerPoint = event.pointer.point.copy();
+            this.isResizingProperty.value = true;
           },
-          keyboardDragListenerOptions: {
-            dragSpeed: OVERLAY_DRAG_SPEED,
-            shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED,
-            start: () => {
-              this.isResizingProperty.value = true;
-            },
-            drag: (_event, listener) => {
-              applyIncrementalResize(listener.modelDelta.x, listener.modelDelta.y);
-            },
-            end: () => {
-              this.isResizingProperty.value = false;
-            },
+          drag: (event) => {
+            if (!(dragStartState && dragStartPointerPoint)) {
+              return;
+            }
+            const delta = event.pointer.point.minus(dragStartPointerPoint);
+            let newMaxWidth = dragStartState.maxWidth;
+            let newMaxHeight = dragStartState.maxHeight;
+            let deltaX = 0;
+            let deltaY = 0;
+
+            switch (cornerIndex) {
+              case 0: // Top-left
+                newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth - delta.x);
+                newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight - delta.y);
+                deltaX = dragStartState.maxWidth - newMaxWidth;
+                deltaY = dragStartState.maxHeight - newMaxHeight;
+                break;
+              case 1: // Top-right
+                newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth + delta.x);
+                newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight - delta.y);
+                deltaY = dragStartState.maxHeight - newMaxHeight;
+                break;
+              case 2: // Bottom-left
+                newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth - delta.x);
+                newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight + delta.y);
+                deltaX = dragStartState.maxWidth - newMaxWidth;
+                break;
+              case 3: // Bottom-right
+                newMaxWidth = Math.max(MIN_TABLE_RESIZE_WIDTH, dragStartState.maxWidth + delta.x);
+                newMaxHeight = Math.max(MIN_TABLE_RESIZE_HEIGHT, dragStartState.maxHeight + delta.y);
+                break;
+            }
+
+            this.tableRenderer.applyDimensions(newMaxWidth, newMaxHeight);
+
+            if (deltaX !== 0 || deltaY !== 0) {
+              this.x = dragStartState.nodeX + deltaX;
+              this.y = dragStartState.nodeY + deltaY;
+            }
           },
-          tandem: Tandem.OPT_OUT,
-        }),
-      );
+          end: () => {
+            dragStartState = null;
+            dragStartPointerPoint = null;
+            this.isResizingProperty.value = false;
+          },
+        },
+        keyboardDragListenerOptions: {
+          dragSpeed: OVERLAY_DRAG_SPEED,
+          shiftDragSpeed: OVERLAY_SHIFT_DRAG_SPEED,
+          start: () => {
+            this.isResizingProperty.value = true;
+          },
+          drag: (_event, listener) => {
+            applyIncrementalResize(listener.modelDelta.x, listener.modelDelta.y);
+          },
+          end: () => {
+            this.isResizingProperty.value = false;
+          },
+        },
+        tandem: Tandem.OPT_OUT,
+      });
+      handle.addInputListener(resizeListener);
+      resizeListeners.push(resizeListener);
 
       this.resizeHandles.push(handle);
       this.addChild(handle);
@@ -450,7 +451,17 @@ export class DataTableNode extends Node {
         property.unlink(themeOrLocaleListener);
       }
       videoLoadedProperty.unlink(videoLoadedListener);
+      // Chrome that links to sim-lifetime string and accessible-name Properties.
+      // ButtonNode does not dispose its content, so the label row goes separately.
       exportButton.dispose();
+      exportButtonContent.disposeSubtree();
+      titleLabel.dispose();
+      for (const listener of resizeListeners) {
+        listener.dispose();
+      }
+      for (const handle of this.resizeHandles) {
+        handle.dispose();
+      }
       panel.localBoundsProperty.unlink(localBoundsListener);
       this.isResizingProperty.unlink(isResizingListener);
       this.isResizingProperty.dispose();
