@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import type { ServerResponse } from "node:http";
+import { createRequire } from "node:module";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import { defineConfig } from "vite";
@@ -212,7 +213,8 @@ function serveVideos(): Plugin {
  * service worker caches the old index chunk but the server has new assets.
  */
 function serveOpenCV(): Plugin {
-  const opencvSrc = path.resolve("node_modules/@techstark/opencv-js/dist/opencv.js");
+  const require = createRequire(import.meta.url);
+  const opencvSrc = require.resolve("@techstark/opencv-js");
   return {
     name: "serve-opencv",
     configureServer(server: ViteDevServer): void {
