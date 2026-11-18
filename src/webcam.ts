@@ -194,12 +194,23 @@ export function fixWebmDuration(blob: Blob): Promise<{ blob: Blob; duration: num
   });
 }
 
+/** Stop every track of a stream, releasing the camera. */
+function stopTracks(stream: MediaStream): void {
+  for (const track of stream.getTracks()) {
+    track.stop();
+  }
+}
+
 export class WebcamRecorder {
   private stream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private previewElement: HTMLVideoElement | null = null;
   private currentDeviceId: string | null = null;
+
+  // Id of the latest startPreview() request. stopPreview() and a newer
+  // startPreview() bump it, so a camera open that resolves late can tell it is stale.
+  private previewRequestId = 0;
 
   /**
    * Request camera permission and get available devices.
@@ -213,9 +224,7 @@ export class WebcamRecorder {
         audio: false,
       });
       // Stop the temporary stream
-      for (const track of tempStream.getTracks()) {
-        track.stop();
-      }
+      stopTracks(tempStream);
       return true;
     } catch (_err) {
       return false;
@@ -232,6 +241,8 @@ export class WebcamRecorder {
 
   /**
    * Start the camera preview on the specified video element.
+   * Resolves without starting anything if stopPreview(), cleanup() or a newer
+   * startPreview() supersedes this request while it is pending.
    * @param previewEl - The video element to display the preview
    * @param deviceId - Optional device ID to use a specific camera
    * @param frameRate - Optional frame rate constraints (e.g. { ideal: 60, max: 60 })
@@ -241,8 +252,9 @@ export class WebcamRecorder {
     deviceId?: string,
     frameRate?: FrameRateConstraints,
   ): Promise<void> {
-    // Stop any existing stream first
+    // Stop any existing stream first (this also invalidates pending requests)
     this.stopPreview();
+    const requestId = this.previewRequestId;
 
     const videoConstraints: MediaTrackConstraints = deviceId ? { deviceId: { exact: deviceId } } : {};
     if (frameRate) {
@@ -254,22 +266,39 @@ export class WebcamRecorder {
       audio: false,
     };
 
-    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (requestId !== this.previewRequestId) {
+      stopTracks(stream);
+      return;
+    }
+    this.stream = stream;
     this.previewElement = previewEl;
-    this.previewElement.srcObject = this.stream;
+    previewEl.srcObject = stream;
     this.currentDeviceId = deviceId || null;
 
-    await this.previewElement.play();
+    try {
+      await previewEl.play();
+    } catch (error) {
+      // Release this request's own stream. If the request is still current,
+      // also detach it and report the failure; a superseded one stays quiet.
+      stopTracks(stream);
+      if (requestId !== this.previewRequestId) {
+        return;
+      }
+      this.stream = null;
+      previewEl.srcObject = null;
+      throw error;
+    }
   }
 
   /**
    * Stop the camera preview and release the stream.
+   * Also cancels any startPreview() still waiting on the camera.
    */
   public stopPreview(): void {
+    this.previewRequestId++;
     if (this.stream) {
-      for (const track of this.stream.getTracks()) {
-        track.stop();
-      }
+      stopTracks(this.stream);
       this.stream = null;
     }
     if (this.previewElement) {

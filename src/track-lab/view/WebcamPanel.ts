@@ -76,6 +76,9 @@ export class WebcamPanel extends Node {
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private recordingStart = 0;
   private fpsEstimate: FPSEstimate | null = null;
+  // Bumped by open() and cleanup() so an open() still awaiting permission
+  // does not start the camera after Cancel or a newer open().
+  private openRequestId = 0;
 
   public constructor(options: WebcamPanelOptions) {
     super();
@@ -287,20 +290,33 @@ export class WebcamPanel extends Node {
     this.resetPreviewUI();
     this.setStatus(this.webcamStrings.requestingAccessStringProperty.value);
     this._startButton.enabled = false;
+    const requestId = ++this.openRequestId;
+    const isStale = () => requestId !== this.openRequestId;
 
     try {
       const granted = await this.recorder.requestPermission();
+      if (isStale()) {
+        return;
+      }
       if (!granted) {
         this.setStatus(this.webcamStrings.accessDeniedStringProperty.value);
         return;
       }
 
       await this.populateCameras();
+      if (isStale()) {
+        return;
+      }
       await this.recorder.startPreview(this.previewElement, this.cameraSelect.value || undefined);
+      if (isStale()) {
+        return;
+      }
       this.clearStatus();
       this._startButton.enabled = true;
     } catch {
-      this.setStatus(this.webcamStrings.accessDeniedStringProperty.value);
+      if (!isStale()) {
+        this.setStatus(this.webcamStrings.accessDeniedStringProperty.value);
+      }
     }
   }
 
@@ -325,6 +341,7 @@ export class WebcamPanel extends Node {
    * outstanding blob URL. Safe to call multiple times.
    */
   public cleanup(): void {
+    this.openRequestId++;
     this.stopTimer();
     this.recorder.cleanup();
     if (this.recordedBlob) {

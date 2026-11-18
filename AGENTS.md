@@ -76,7 +76,8 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 
 Actual specs:
 
-- `tests/webcam.test.ts` — animated WebP metadata and decoder cleanup on success, early returns and failures
+- `tests/webcam.test.ts` — animated WebP metadata and decoder cleanup on success, early returns and failures; stale or failed camera opens release their own stream
+- `tests/track-lab/view/WebcamPanel.test.ts` — Cancel during the permission prompt does not start the camera
 - `tests/track-lab/model/KinematicsComputer.test.ts`
 - `tests/track-lab/model/TrackingModel.test.ts`
 - `tests/track-lab/model/TrackRetiming.test.ts` — frame indices re-derived from timestamps on frame-rate change
