@@ -141,6 +141,11 @@ export const CONTROL_ICON_TRACKING_GAP_FRACTION = 0.15;
 // buttons on the configurable graph. A value of 1.1 zooms by 10% per step.
 export const GRAPH_ZOOM_FACTOR = 1.1;
 
+// Smallest finger separation (view px) used as a pinch-zoom divisor. Two
+// fingers that meet would otherwise divide by zero and push an infinite range
+// into the chart transform.
+export const GRAPH_MIN_PINCH_DISTANCE = 1;
+
 TrackLabNamespace.register("TrackLabConstants", {
   PANEL_CORNER_RADIUS,
   VIDEO_WIDTH,
@@ -201,4 +206,5 @@ TrackLabNamespace.register("TrackLabConstants", {
   CONTROL_ICON_TRACKING_RADIUS_FRACTION,
   CONTROL_ICON_TRACKING_GAP_FRACTION,
   GRAPH_ZOOM_FACTOR,
+  GRAPH_MIN_PINCH_DISTANCE,
 });

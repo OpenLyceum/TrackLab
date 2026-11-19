@@ -17,7 +17,12 @@
 import type { ChartRectangle, ChartTransform } from "scenerystack/bamboo";
 import { Range, Vector2 } from "scenerystack/dot";
 import { type Pointer, type Rectangle, RichDragListener } from "scenerystack/scenery";
-import { GRAPH_PAN_SHIFT_DRAG_SPEED, GRAPH_ZOOM_FACTOR, OVERLAY_DRAG_SPEED } from "../../TrackLabConstants.js";
+import {
+  GRAPH_MIN_PINCH_DISTANCE,
+  GRAPH_PAN_SHIFT_DRAG_SPEED,
+  GRAPH_ZOOM_FACTOR,
+  OVERLAY_DRAG_SPEED,
+} from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 import type { GraphDataManager } from "./GraphDataManager.js";
 import type { ChartConfig, GraphDimensions } from "./GraphTypes.js";
@@ -155,7 +160,7 @@ export class AxisGestureHandler {
             return;
           }
 
-          const zoomFactor = initialPinchDistance / Math.abs(coord(p0) - coord(p1));
+          const zoomFactor = initialPinchDistance / Math.max(Math.abs(coord(p0) - coord(p1)), GRAPH_MIN_PINCH_DISTANCE);
 
           // Build a view midpoint at the pinch centre; use the graph centre on
           // the perpendicular axis so the localToModel conversion is correct.

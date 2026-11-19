@@ -9,7 +9,7 @@
 import type { ChartRectangle, ChartTransform } from "scenerystack/bamboo";
 import { Range, Vector2 } from "scenerystack/dot";
 import type { Pointer } from "scenerystack/scenery";
-import { GRAPH_ZOOM_FACTOR } from "../../TrackLabConstants.js";
+import { GRAPH_MIN_PINCH_DISTANCE, GRAPH_ZOOM_FACTOR } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 import type { GraphDataManager } from "./GraphDataManager.js";
 import type { ChartConfig, GraphDimensions } from "./GraphTypes.js";
@@ -141,7 +141,7 @@ export class ZoomGestureHandler {
           }
 
           const currentDistance = point0.distance(point1);
-          const zoomFactor = initialDistance / currentDistance;
+          const zoomFactor = initialDistance / Math.max(currentDistance, GRAPH_MIN_PINCH_DISTANCE);
           const initialModelCenter = this.chartTransform.viewToModelPosition(initialMidpoint);
 
           const xMin = initialModelCenter.x - (initialModelCenter.x - initialXRange.min) * zoomFactor;
