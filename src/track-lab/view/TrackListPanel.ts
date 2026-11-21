@@ -232,7 +232,8 @@ export class TrackListPanel extends Panel {
       // Dispose old track rows before creating new ones
       for (const child of trackListVBox.children) {
         if (child instanceof TrackRowNode) {
-          child.dispose();
+          // disposeSubtree(): the row's label and trash icon are children Node.dispose() leaves.
+          child.disposeSubtree();
         }
       }
       trackListVBox.children = tracks.map((track) => new TrackRowNode(track, tracking));
@@ -246,7 +247,8 @@ export class TrackListPanel extends Panel {
       // Dispose all track rows
       for (const child of trackListVBox.children) {
         if (child instanceof TrackRowNode) {
-          child.dispose();
+          // disposeSubtree(): the row's label and trash icon are children Node.dispose() leaves.
+          child.disposeSubtree();
         }
       }
       addButtonEnabledProperty.dispose();

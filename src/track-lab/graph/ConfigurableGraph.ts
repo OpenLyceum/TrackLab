@@ -409,6 +409,8 @@ export class ConfigurableGraph extends Node {
     const trackPlot = this.trackPlots.get(trackId);
     if (trackPlot) {
       this.graphRenderer.clippedDataContainer.removeChild(trackPlot.linePlot);
+      // A LinePlot listens to the long-lived chartTransform until disposed.
+      trackPlot.linePlot.dispose();
       this.trackPlots.delete(trackId);
     }
   }

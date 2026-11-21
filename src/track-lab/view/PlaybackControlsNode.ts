@@ -402,7 +402,7 @@ export class PlaybackControlsNode extends HBox {
       // swap it with.  Dispose the replacement rather than dropping it on the
       // floor: an undisposed HSlider keeps listeners on currentTimeProperty
       // alive forever.
-      newScrubber.dispose();
+      newScrubber.disposeSubtree();
       return;
     }
 
@@ -415,8 +415,9 @@ export class PlaybackControlsNode extends HBox {
     // Insert new scrubber at the same position
     this.insertChild(scrubberIndex, newScrubber);
 
-    // Dispose old scrubber after it's removed from scene graph
-    oldScrubber.dispose();
+    // Dispose old scrubber after it's removed from scene graph. disposeSubtree(): Node.dispose()
+    // would leave its thumb, track and tick Paths (stroked with a long-lived color Property).
+    oldScrubber.disposeSubtree();
   }
 
   public get scrubbing(): boolean {

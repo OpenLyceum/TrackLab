@@ -114,7 +114,8 @@ export class KinematicsGraphNode extends Node {
     const tracksListener = (tracks: readonly Track[]) => {
       // Dispose old checkboxes
       for (const [, { checkbox, property, nameProperty }] of this.trackCheckboxes) {
-        checkbox.dispose();
+        // disposeSubtree(): Node.dispose() would leave the checkbox's label and box icons.
+        checkbox.disposeSubtree();
         property.dispose();
         nameProperty.dispose();
       }
@@ -198,7 +199,8 @@ export class KinematicsGraphNode extends Node {
       videoLoadedProperty.unlink(videoLoadedListener);
       this.graph.localBoundsProperty.unlink(graphBoundsListener);
       for (const [, { checkbox, property, nameProperty }] of this.trackCheckboxes) {
-        checkbox.dispose();
+        // disposeSubtree(): Node.dispose() would leave the checkbox's label and box icons.
+        checkbox.disposeSubtree();
         property.dispose();
         nameProperty.dispose();
       }
