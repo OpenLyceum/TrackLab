@@ -358,6 +358,7 @@ export class ConfigurableGraph extends Node {
   }
 
   public override dispose(): void {
+    this.clearAllTracks();
     this.disposeConfigurableGraph();
     super.dispose();
   }
@@ -412,6 +413,18 @@ export class ConfigurableGraph extends Node {
       // A LinePlot listens to the long-lived chartTransform until disposed.
       trackPlot.linePlot.dispose();
       this.trackPlots.delete(trackId);
+    }
+  }
+
+  /**
+   * Drop any plotted tracks whose ids are not in `keep`. Existing plots stay put —
+   * callers should update them with `setTrackData` rather than clear-and-recreate.
+   */
+  public retainOnlyTracks(keep: ReadonlySet<string>): void {
+    for (const trackId of [...this.trackPlots.keys()]) {
+      if (!keep.has(trackId)) {
+        this.removeTrack(trackId);
+      }
     }
   }
 

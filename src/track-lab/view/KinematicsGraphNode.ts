@@ -311,20 +311,18 @@ export class KinematicsGraphNode extends Node {
   /**
    * Updates the graph with data from all selected tracks.
    * Each track gets its own curve with its own color.
+   *
+   * LinePlots are reused across updates. Clearing and recreating them on every
+   * kinematics tick re-linked each plot to the long-lived ChartTransform and was
+   * the dominant pointer-fuzz heap climb (Bamboo LinePlot listens until disposed).
    */
   private updateGraph(): void {
-    // Clear all tracks first
-    this.graph.clearAllTracks();
-
     const selectedIds = this.selectedTracksProperty.value;
-    if (selectedIds.size === 0) {
-      return;
-    }
-
     const kinematics = this.tracking.trackKinematicsProperty.value;
     const tracks = this.tracking.tracksProperty.value;
+    const plottedIds = new Set<string>();
 
-    // Plot each selected track separately with its own color
+    // Update or create a plot for each selected track that has points.
     for (const trackId of selectedIds) {
       const trackData = kinematics.find((tk) => tk.id === trackId);
       const track = tracks.find((t) => t.id === trackId);
@@ -342,10 +340,13 @@ export class KinematicsGraphNode extends Node {
           aMag: pt.accelerationMagnitude ?? Number.NaN,
         }));
 
-        // Set track data with the track's color
         this.graph.setTrackData(trackId, getTrackColor(track.colorIndex), dataPoints);
+        plottedIds.add(trackId);
       }
     }
+
+    // Drop plots for deselected / empty tracks without touching the survivors.
+    this.graph.retainOnlyTracks(plottedIds);
   }
 }
 

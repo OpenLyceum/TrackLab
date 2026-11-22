@@ -8,10 +8,11 @@
  */
 
 import { BooleanProperty, NumberProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
-import { KeyboardDragDirectionToKeyStringPropertiesMap, Node } from "scenerystack/scenery";
+import { Color, KeyboardDragDirectionToKeyStringPropertiesMap, Node } from "scenerystack/scenery";
 import { describe, expect, it, vi } from "vitest";
 import { StringManager } from "../src/i18n/StringManager.js";
 import TrackLabColors from "../src/TrackLabColors.js";
+import { ConfigurableGraph } from "../src/track-lab/graph/ConfigurableGraph.js";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
 import { OverlayToolsModel } from "../src/track-lab/model/OverlayToolsModel.js";
@@ -302,6 +303,57 @@ describeDisposalLeaks([
     keepAlive: () => [videoLoadedProperty, sharedTracking],
   },
 ]);
+
+// ConfigurableGraph must reuse LinePlots across setTrackData updates. Clearing and
+// recreating them on every kinematics tick re-attaches each plot to the long-lived
+// ChartTransform (Bamboo LinePlot listens until disposed) and was the pointer-fuzz climb.
+describe("ConfigurableGraph LinePlot reuse", () => {
+  type TrackPlots = Map<string, { linePlot: object }>;
+
+  function trackPlotsOf(graph: ConfigurableGraph): TrackPlots {
+    return (graph as unknown as { trackPlots: TrackPlots }).trackPlots;
+  }
+
+  it("setTrackData keeps the same LinePlot; retainOnlyTracks disposes the rest", () => {
+    const listParent = new Node();
+    const graph = new ConfigurableGraph(
+      SAMPLE_PLOTTABLES,
+      TIME_PLOTTABLE,
+      POSITION_PLOTTABLE,
+      200,
+      150,
+      100,
+      listParent,
+    );
+
+    graph.setTrackData("a", new Color(255, 0, 0), [
+      { t: 0, x: 0 },
+      { t: 1, x: 1 },
+    ]);
+    const firstPlot = trackPlotsOf(graph).get("a")?.linePlot;
+    expect(firstPlot).toBeDefined();
+
+    for (let i = 2; i < 12; i++) {
+      graph.setTrackData("a", new Color(255, 0, 0), [
+        { t: 0, x: 0 },
+        { t: i, x: i },
+      ]);
+    }
+    expect(trackPlotsOf(graph).get("a")?.linePlot).toBe(firstPlot);
+
+    graph.setTrackData("b", new Color(0, 255, 0), [
+      { t: 0, x: 1 },
+      { t: 1, x: 2 },
+    ]);
+    expect(trackPlotsOf(graph).size).toBe(2);
+
+    graph.retainOnlyTracks(new Set(["a"]));
+    expect(trackPlotsOf(graph).size).toBe(1);
+    expect(trackPlotsOf(graph).has("a")).toBe(true);
+
+    graph.dispose();
+  });
+});
 
 // TrackListPanel rebuilds every TrackRowNode whenever a track is added or removed. Each row
 // links to activeTrackIdProperty and derives its checkbox / trash-button accessible names
