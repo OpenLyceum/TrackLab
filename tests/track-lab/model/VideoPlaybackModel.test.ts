@@ -41,7 +41,7 @@ describe("VideoPlaybackModel seeking", () => {
 
   beforeEach(() => {
     model = new VideoPlaybackModel();
-    model.durationProperty.value = 10;
+    model.updateDuration(10);
   });
 
   it("advances by exactly one frame duration", () => {
@@ -80,5 +80,25 @@ describe("VideoPlaybackModel seeking", () => {
 
     expect(model.currentTimeProperty.value).toBe(0);
     expect(model.isPlayingProperty.value).toBe(false);
+  });
+});
+
+describe("VideoPlaybackModel duration", () => {
+  it("waits for finite duration metadata and keeps the last valid duration", () => {
+    const model = new VideoPlaybackModel();
+    model.updateDuration(Number.POSITIVE_INFINITY);
+    expect(model.durationProperty.value).toBe(0);
+    expect(model.videoLoadedProperty.value).toBe(false);
+
+    model.updateDuration(2.5);
+    expect(model.videoLoadedProperty.value).toBe(true);
+    for (const invalidDuration of [Number.POSITIVE_INFINITY, Number.NaN, 0, -1]) {
+      model.updateDuration(invalidDuration);
+      expect(model.durationProperty.value).toBe(2.5);
+    }
+
+    model.reset();
+    expect(model.durationProperty.value).toBe(0);
+    expect(model.videoLoadedProperty.value).toBe(false);
   });
 });

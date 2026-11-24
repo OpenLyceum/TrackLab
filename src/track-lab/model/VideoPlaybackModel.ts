@@ -32,7 +32,11 @@ export class VideoPlaybackModel {
   public readonly currentTimeProperty = new NumberProperty(0, {
     range: new Range(0, Number.MAX_VALUE),
   });
-  public readonly durationProperty = new Property<number>(0);
+  private readonly ownedDurationProperty = new NumberProperty(0, {
+    range: new Range(0, Number.MAX_VALUE),
+    units: "s",
+  });
+  public readonly durationProperty: TReadOnlyProperty<number> = this.ownedDurationProperty;
 
   // ── Frame rate (user-settable, default 30 fps) ─────────────────────────
   public readonly frameRateProperty = new NumberProperty(DEFAULT_FRAME_RATE, {
@@ -98,6 +102,13 @@ export class VideoPlaybackModel {
     range: new Range(0.5, 1.5),
   });
 
+  /** Accepts resolved metadata and retains the last duration while metadata is unavailable. */
+  public updateDuration(seconds: number): void {
+    if (Number.isFinite(seconds) && seconds > 0) {
+      this.ownedDurationProperty.value = seconds;
+    }
+  }
+
   /**
    * Convert a continuous time value to a discrete frame index.
    * Multiply by frame rate directly rather than dividing by frameDuration
@@ -139,7 +150,7 @@ export class VideoPlaybackModel {
   public reset(): void {
     this.isPlayingProperty.reset();
     this.currentTimeProperty.reset();
-    this.durationProperty.reset();
+    this.ownedDurationProperty.reset();
     this.frameRateProperty.reset();
     this.playbackRateProperty.reset();
     this.totalFrameCountProperty.reset();

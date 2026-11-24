@@ -80,12 +80,7 @@ export class KinematicsGraphNode extends Node {
     const initialFiltered = getFilteredProperties();
 
     // Default: plot y vs x (trajectory)
-    const initialXProperty = groups.position[0];
-    const initialYProperty = groups.position[1];
-
-    if (!(initialXProperty && initialYProperty)) {
-      throw new Error("Failed to initialize plottable properties");
-    }
+    const [initialXProperty, initialYProperty] = groups.position;
 
     // Create the configurable graph
     // Pass 'this' (KinematicsGraphNode) as dragTargetNode so dragging moves the whole container
@@ -328,19 +323,7 @@ export class KinematicsGraphNode extends Node {
       const track = tracks.find((t) => t.id === trackId);
 
       if (trackData && track && trackData.points.length > 0) {
-        const dataPoints = trackData.points.map((pt) => ({
-          t: pt.time,
-          x: pt.x,
-          y: pt.y,
-          vx: pt.vx ?? Number.NaN,
-          vy: pt.vy ?? Number.NaN,
-          speed: pt.speed ?? Number.NaN,
-          ax: pt.ax ?? Number.NaN,
-          ay: pt.ay ?? Number.NaN,
-          aMag: pt.accelerationMagnitude ?? Number.NaN,
-        }));
-
-        this.graph.setTrackData(trackId, getTrackColor(track.colorIndex), dataPoints);
+        this.graph.setTrackData(trackId, getTrackColor(track.colorIndex), trackData.points);
         plottedIds.add(trackId);
       }
     }

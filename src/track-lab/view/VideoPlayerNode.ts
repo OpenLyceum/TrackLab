@@ -126,10 +126,7 @@ export class VideoPlayerNode extends Node {
     this.videoElement.addEventListener("loadstart", onVideoLoadStart, { signal });
 
     const updateDuration = () => {
-      const d = this.videoElement.duration;
-      if (d > 0) {
-        model.playback.durationProperty.value = d;
-      }
+      model.playback.updateDuration(this.videoElement.duration);
     };
 
     const onLoadedMetadata = () => {
@@ -259,9 +256,7 @@ export class VideoPlayerNode extends Node {
         this.currentBlobUrl = URL.createObjectURL(blob);
         this.videoElement.src = this.currentBlobUrl;
         this.videoElement.load();
-        if (duration > 0) {
-          model.playback.durationProperty.value = duration;
-        }
+        model.playback.updateDuration(duration);
       },
       model.overlayTools.videoContentVisibleProperty,
       model.playback.videoLoadedProperty,

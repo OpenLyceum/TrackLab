@@ -16,6 +16,7 @@ import { ConfigurableGraph } from "../src/track-lab/graph/ConfigurableGraph.js";
 import { GraphControlsPanel } from "../src/track-lab/graph/GraphControlsPanel.js";
 import type { PlottableProperty } from "../src/track-lab/graph/PlottableProperty.js";
 import { OverlayToolsModel } from "../src/track-lab/model/OverlayToolsModel.js";
+import type { KinematicPoint } from "../src/track-lab/model/Track.js";
 import { TrackingModel } from "../src/track-lab/model/TrackingModel.js";
 import { TrackLabModel } from "../src/track-lab/model/TrackLabModel.js";
 import { VideoPlaybackModel } from "../src/track-lab/model/VideoPlaybackModel.js";
@@ -32,18 +33,13 @@ import { VideoSourceControlNode } from "../src/track-lab/view/VideoSourceControl
 import { WebcamPanel } from "../src/track-lab/view/WebcamPanel.js";
 import { describeDisposalLeaks, expectNoListenerGrowth, forceGC } from "./helpers/memoryLeak.js";
 
-// Named separately from the array so callers can reference them without an
-// index lookup, which under noUncheckedIndexedAccess would widen to
-// `PlottableProperty | undefined` and force a non-null assertion.
-// Bracket access because `point` is a Record<string, number> and the project
-// sets noPropertyAccessFromIndexSignature.
 const TIME_PLOTTABLE: PlottableProperty = {
   name: "t",
-  accessor: (point: Record<string, number>) => point["t"] ?? 0,
+  key: "time",
 };
 const POSITION_PLOTTABLE: PlottableProperty = {
   name: "x",
-  accessor: (point: Record<string, number>) => point["x"] ?? 0,
+  key: "x",
 };
 
 const SAMPLE_PLOTTABLES: PlottableProperty[] = [TIME_PLOTTABLE, POSITION_PLOTTABLE];
@@ -129,8 +125,8 @@ describe("Memory leak regression", () => {
 
     const afterConstruct = listenerCount(playback.currentTimeProperty);
     // Each of these triggers replaceScrubber().
-    playback.durationProperty.value = 10;
-    playback.durationProperty.value = 20;
+    playback.updateDuration(10);
+    playback.updateDuration(20);
     playback.frameRateProperty.value = 60;
     expect(listenerCount(playback.currentTimeProperty)).toBe(afterConstruct);
 
@@ -314,6 +310,21 @@ describe("ConfigurableGraph LinePlot reuse", () => {
     return (graph as unknown as { trackPlots: TrackPlots }).trackPlots;
   }
 
+  function sample(time: number, x: number): KinematicPoint {
+    return {
+      frame: time * 30,
+      time,
+      x,
+      y: 0,
+      vx: null,
+      vy: null,
+      speed: null,
+      ax: null,
+      ay: null,
+      accelerationMagnitude: null,
+    };
+  }
+
   it("setTrackData keeps the same LinePlot; retainOnlyTracks disposes the rest", () => {
     const listParent = new Node();
     const graph = new ConfigurableGraph(
@@ -326,25 +337,16 @@ describe("ConfigurableGraph LinePlot reuse", () => {
       listParent,
     );
 
-    graph.setTrackData("a", new Color(255, 0, 0), [
-      { t: 0, x: 0 },
-      { t: 1, x: 1 },
-    ]);
+    graph.setTrackData("a", new Color(255, 0, 0), [sample(0, 0), sample(1, 1)]);
     const firstPlot = trackPlotsOf(graph).get("a")?.linePlot;
     expect(firstPlot).toBeDefined();
 
     for (let i = 2; i < 12; i++) {
-      graph.setTrackData("a", new Color(255, 0, 0), [
-        { t: 0, x: 0 },
-        { t: i, x: i },
-      ]);
+      graph.setTrackData("a", new Color(255, 0, 0), [sample(0, 0), sample(i, i)]);
     }
     expect(trackPlotsOf(graph).get("a")?.linePlot).toBe(firstPlot);
 
-    graph.setTrackData("b", new Color(0, 255, 0), [
-      { t: 0, x: 1 },
-      { t: 1, x: 2 },
-    ]);
+    graph.setTrackData("b", new Color(0, 255, 0), [sample(0, 1), sample(1, 2)]);
     expect(trackPlotsOf(graph).size).toBe(2);
 
     graph.retainOnlyTracks(new Set(["a"]));
@@ -552,20 +554,38 @@ describe("VideoPlayerNode", () => {
   });
 
   it("stops handling document keydown after dispose", () => {
-    const seekToStart = vi.spyOn(trackLabModel.playback, "seekToStart");
-    const { durationProperty } = trackLabModel.playback;
-    const initialDuration = durationProperty.value;
+    const model = new TrackLabModel();
+    const seekToStart = vi.spyOn(model.playback, "seekToStart");
+    model.playback.updateDuration(10); // the Home shortcut only acts once a video is loaded
+    const node = new VideoPlayerNode(model, videoPlayerListParent);
     try {
-      durationProperty.value = 10; // the Home shortcut only acts once a video is loaded
-      const node = createVideoPlayerNode();
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
-      expect(seekToStart).toHaveBeenCalledTimes(1);
-      node.dispose();
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
       expect(seekToStart).toHaveBeenCalledTimes(1);
     } finally {
-      durationProperty.value = initialDuration;
-      seekToStart.mockRestore();
+      node.dispose();
+    }
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" }));
+    expect(seekToStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for the finite duration published by the WebM metadata seek", () => {
+    const model = new TrackLabModel();
+    const node = new VideoPlayerNode(model, videoPlayerListParent);
+    const video = videoElementOf(node);
+    const duration = vi.spyOn(video, "duration", "get").mockReturnValue(Number.POSITIVE_INFINITY);
+    try {
+      video.dispatchEvent(new Event("loadedmetadata"));
+      expect(model.playback.videoLoadedProperty.value).toBe(false);
+      expect(video.currentTime).toBe(Number.MAX_SAFE_INTEGER);
+
+      duration.mockReturnValue(2.5);
+      video.dispatchEvent(new Event("durationchange"));
+      video.dispatchEvent(new Event("seeked"));
+      expect(model.playback.durationProperty.value).toBe(2.5);
+      expect(model.playback.videoLoadedProperty.value).toBe(true);
+      expect(video.currentTime).toBe(0);
+    } finally {
+      node.dispose();
     }
   });
 

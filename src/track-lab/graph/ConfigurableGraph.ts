@@ -12,7 +12,7 @@
  * | `GraphDataManager.ts` | Accumulates (x, y) data points, drives auto-scaling, and owns the tick-spacing algorithm |
  * | `GraphInteractionHandler.ts` | All pointer/touch/keyboard gestures: pan, pinch-zoom, axis-drag, header-drag, corner-resize |
  * | `GraphControlsPanel.ts` | Builds the axis-selector dropdowns and header bar UI |
- * | `PlottableProperty.ts` | `PlottableProperty` union type — the interface any quantity must satisfy to appear in the axis selector |
+ * | `PlottableProperty.ts` | `PlottableProperty` type — the field and display metadata for each axis choice |
  * | `kinematics-plottable-properties.ts` | Canonical registry of all kinematics quantities; the sole place to add a new plottable quantity |
  *
  * ## Data flow
@@ -53,36 +53,36 @@
  * show the graph; the ToolsControlPanel checkbox is the standard toggle.
  */
 
-import { BooleanProperty, Property } from "scenerystack/axon";
+import { BooleanProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
 import { ChartTransform, LinePlot } from "scenerystack/bamboo";
 import { Range } from "scenerystack/dot";
 import { Node } from "scenerystack/scenery";
 import { StringManager } from "../../i18n/StringManager.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
+import type { KinematicPoint } from "../model/Track.js";
 import { GraphControlsPanel } from "./GraphControlsPanel.js";
 import { GraphDataManager } from "./GraphDataManager.js";
 import { GraphInteractionHandler } from "./GraphInteractionHandler.js";
 import { GraphRenderer } from "./GraphRenderer.js";
-import { isRecordPlottable, type PlottableProperty } from "./PlottableProperty.js";
+import type { PlottableProperty } from "./PlottableProperty.js";
 
 // Line-plot stroke width — only ConfigurableGraph creates LinePlots
 const PLOT_LINE_WIDTH = 2;
 const TITLE_BOTTOM_OFFSET = -5;
 
 /**
- * Map raw data-point records to {x, y} pairs using the current axis accessors.
- * NaN points are filtered out so the line plot stays clean.
+ * Project kinematics onto the selected axes and skip unavailable or invalid values.
  */
 function mapDataPoints(
-  dataPoints: Record<string, number>[],
+  dataPoints: readonly KinematicPoint[],
   xProperty: PlottableProperty,
   yProperty: PlottableProperty,
 ): Array<{ x: number; y: number }> {
   const result: Array<{ x: number; y: number }> = [];
   for (const point of dataPoints) {
-    const x = isRecordPlottable(xProperty) ? xProperty.accessor(point) : 0;
-    const y = isRecordPlottable(yProperty) ? yProperty.accessor(point) : 0;
-    if (!(Number.isNaN(x) || Number.isNaN(y))) {
+    const x = point[xProperty.key];
+    const y = point[yProperty.key];
+    if (x !== null && y !== null && Number.isFinite(x) && Number.isFinite(y)) {
       result.push({ x, y });
     }
   }
@@ -320,11 +320,11 @@ export class ConfigurableGraph extends Node {
     return this.yPropertyProperty.value;
   }
 
-  public getXPropertyProperty(): Property<PlottableProperty> {
+  public getXPropertyProperty(): TReadOnlyProperty<PlottableProperty> {
     return this.xPropertyProperty;
   }
 
-  public getYPropertyProperty(): Property<PlottableProperty> {
+  public getYPropertyProperty(): TReadOnlyProperty<PlottableProperty> {
     return this.yPropertyProperty;
   }
 
@@ -377,7 +377,7 @@ export class ConfigurableGraph extends Node {
   public setTrackData(
     trackId: string,
     trackColor: import("scenerystack/scenery").TColor,
-    dataPoints: Record<string, number>[],
+    dataPoints: readonly KinematicPoint[],
   ): void {
     if (!this.trackPlots.has(trackId)) {
       const linePlot = new LinePlot(this.chartTransform, [], {

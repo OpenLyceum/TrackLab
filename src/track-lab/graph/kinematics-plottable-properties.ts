@@ -6,8 +6,7 @@
  *
  *  - Adding a new physical quantity (e.g. kinetic energy) requires a change in
  *    exactly one place rather than hunting through KinematicsGraphNode.
- *  - The accessor keys (e.g. "vx", "aMag") are co-located with the
- *    PlottableProperty definitions, making key–accessor mismatches obvious.
+ *  - The selected fields are checked against KinematicPoint.
  *  - Unit properties from the model are wired in a single factory call,
  *    keeping KinematicsGraphNode free of quantity-specific knowledge.
  *
@@ -15,7 +14,6 @@
  *
  *   1. Compute it in `KinematicsComputer.ts` and add it to `TrackKinematicsPoint`.
  *   2. Add a `createPlottableProperty(...)` call below with the matching key.
- *   3. Expose it in the `dataPoints` map inside `KinematicsGraphNode.updateGraph()`.
  *
  * That's it — the graph axis selector picks it up automatically because it
  * renders whatever is in this array.
@@ -28,9 +26,9 @@ import type { PlottableProperty } from "./PlottableProperty.js";
 function createPlottableProperty(
   name: string,
   unit: string | TReadOnlyProperty<string>,
-  accessor: (point: Record<string, number>) => number,
+  key: PlottableProperty["key"],
 ): PlottableProperty {
-  return { name, unit, accessor };
+  return { name, unit, key };
 }
 
 /**
@@ -41,7 +39,7 @@ export type KinematicsPlottableGroups = {
   /** Time — always available */
   time: PlottableProperty[];
   /** Position components — always available */
-  position: PlottableProperty[];
+  position: readonly [PlottableProperty, PlottableProperty];
   /** Velocity components — shown when the "show velocity" preference is on */
   velocity: PlottableProperty[];
   /** Acceleration components — shown when the "show acceleration" preference is on */
@@ -58,26 +56,26 @@ export type KinematicsPlottableGroups = {
 export function buildKinematicsPlottableGroups(overlayTools: OverlayToolsModel): KinematicsPlottableGroups {
   return {
     // ── Time ──────────────────────────────────────────────────────────────
-    time: [createPlottableProperty("t", "s", (pt) => pt["t"] ?? 0)],
+    time: [createPlottableProperty("t", "s", "time")],
 
     // ── Position ──────────────────────────────────────────────────────────
     position: [
-      createPlottableProperty("x", overlayTools.calibUnitProperty, (pt) => pt["x"] ?? 0),
-      createPlottableProperty("y", overlayTools.calibUnitProperty, (pt) => pt["y"] ?? 0),
+      createPlottableProperty("x", overlayTools.calibUnitProperty, "x"),
+      createPlottableProperty("y", overlayTools.calibUnitProperty, "y"),
     ],
 
     // ── Velocity ──────────────────────────────────────────────────────────
     velocity: [
-      createPlottableProperty("vx", overlayTools.velocityUnitProperty, (pt) => pt["vx"] ?? 0),
-      createPlottableProperty("vy", overlayTools.velocityUnitProperty, (pt) => pt["vy"] ?? 0),
-      createPlottableProperty("speed", overlayTools.velocityUnitProperty, (pt) => pt["speed"] ?? 0),
+      createPlottableProperty("vx", overlayTools.velocityUnitProperty, "vx"),
+      createPlottableProperty("vy", overlayTools.velocityUnitProperty, "vy"),
+      createPlottableProperty("speed", overlayTools.velocityUnitProperty, "speed"),
     ],
 
     // ── Acceleration ──────────────────────────────────────────────────────
     acceleration: [
-      createPlottableProperty("ax", overlayTools.accelerationUnitProperty, (pt) => pt["ax"] ?? 0),
-      createPlottableProperty("ay", overlayTools.accelerationUnitProperty, (pt) => pt["ay"] ?? 0),
-      createPlottableProperty("|a|", overlayTools.accelerationUnitProperty, (pt) => pt["aMag"] ?? 0),
+      createPlottableProperty("ax", overlayTools.accelerationUnitProperty, "ax"),
+      createPlottableProperty("ay", overlayTools.accelerationUnitProperty, "ay"),
+      createPlottableProperty("|a|", overlayTools.accelerationUnitProperty, "accelerationMagnitude"),
     ],
   };
 }
