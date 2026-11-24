@@ -152,6 +152,7 @@ export class DataTableNode extends Node {
         // plumbing, not simulation time, so it must not follow the sim clock.
         document.body.appendChild(link);
         link.click();
+        // biome-ignore lint/plugin/no-native-timer: async host/hardware delay (not sim step)
         setTimeout(() => {
           link.remove();
           URL.revokeObjectURL(url);

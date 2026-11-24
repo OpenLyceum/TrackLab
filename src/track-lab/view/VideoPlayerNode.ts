@@ -6,7 +6,7 @@
  */
 
 import { DerivedProperty } from "scenerystack/axon";
-import { Bounds2, Dimension2, Vector2 } from "scenerystack/dot";
+import { Bounds2, Dimension2, roundSymmetric, Vector2 } from "scenerystack/dot";
 import { Circle, DOM, Node, Rectangle, RichDragListener, Text } from "scenerystack/scenery";
 import { PhetFont } from "scenerystack/scenery-phet";
 import TrackLabColors from "../../TrackLabColors.js";
@@ -126,10 +126,7 @@ export class VideoPlayerNode extends Node {
     this.videoElement.addEventListener("loadstart", onVideoLoadStart, { signal });
 
     const updateDuration = () => {
-      const d = this.videoElement.duration;
-      if (d > 0) {
-        model.playback.durationProperty.value = d;
-      }
+      model.playback.updateDuration(this.videoElement.duration);
     };
 
     const onLoadedMetadata = () => {
@@ -259,9 +256,7 @@ export class VideoPlayerNode extends Node {
         this.currentBlobUrl = URL.createObjectURL(blob);
         this.videoElement.src = this.currentBlobUrl;
         this.videoElement.load();
-        if (duration > 0) {
-          model.playback.durationProperty.value = duration;
-        }
+        model.playback.updateDuration(duration);
       },
       model.overlayTools.videoContentVisibleProperty,
       model.playback.videoLoadedProperty,
@@ -368,8 +363,8 @@ export class VideoPlayerNode extends Node {
         return;
       }
       const scale = Math.min(VIDEO_WIDTH / intrinsicW, VIDEO_HEIGHT / intrinsicH);
-      const displayW = Math.round(intrinsicW * scale);
-      const displayH = Math.round(intrinsicH * scale);
+      const displayW = roundSymmetric(intrinsicW * scale);
+      const displayH = roundSymmetric(intrinsicH * scale);
       this.videoElement.width = displayW;
       this.videoElement.height = displayH;
       model.playback.videoDimensionsProperty.value = new Dimension2(displayW, displayH);
