@@ -54,11 +54,10 @@ Follows the shared [OpenLyceum accessibility convention](https://github.com/Open
 - `memory-leak:CalibrationToolNode` — overlay tool needs a laid-out video boundsProperty; constructor fails under happy-dom without it.
 - `memory-leak:KinematicsGraphNode` — graph chrome retains via StringManager / preferences Properties after dispose.
 - **Domain clock:** `VideoPlaybackModel` drives video timing/scrubbing instead of composing fleet-standard `TimeModel`.
-- `vite.config.ts`: sim-specific, not the template's copy (no `sim.config.json`), for the plugins, caching and policies in the next two bullets.
-  It mirrors the template's `cspMetaTag()` plugin so the CSP also applies on GitHub Pages; keep the two in step.
+- `vite.config.ts`: carved-out fork of the template (still reads `sim.config.json` for title / theme / Permissions-Policy). Keep in step with SceneryStackTemplate for `parseSimConfig`, `cspMetaTag`, `onBundlerLog`, and the PWA block; TrackLab-only deltas are the next two bullets.
 - **Vite plugins / PWA:** `serveVideos` + `serveOpenCV` are extra Vite plugins (ranged `/videos/` and OpenCV WASM). Workbox `globIgnores: ["opencv.js"]` plus `runtimeCaching` keep the ~11 MB OpenCV payload off the precache. There is no `inlineSingleFile` / `--mode single` wiring — OpenCV WASM and video files cannot collapse into a self-contained HTML file. `npm run icons` prefixes `generate-svg-icon` so `icon.svg` is regenerated from the bouncing-ball script.
-- **Permissions-Policy / CSP:** camera and microphone are allowed (`self`) for video capture; `connect-src` includes `data:` because `@techstark/opencv-js` loads WASM as a base64 data URI.
-- **Template drift (Baton `check-template-drift.sh`):** `build:single` is omitted (no single-file mode, see above); `icons` runs `generate-svg-icon` first; `videos/` at the repo root holds the sample clips served by `serveVideos`.
+- **Permissions-Policy / CSP:** `sim.config.json` allows camera and microphone (`self`) for video capture. CSP deltas vs the template: `'wasm-unsafe-eval'` for OpenCV, `blob:` on `img-src`, and `data:` on `connect-src` (`@techstark/opencv-js` loads WASM as a base64 data URI).
+- **Template drift (Baton `check-template-drift.sh`):** `vite.config.ts` is carved out; `build:single` is omitted (no single-file mode, see above); `icons` runs `generate-svg-icon` first; `videos/` at the repo root holds the sample clips served by `serveVideos`.
 
 ## Testing
 

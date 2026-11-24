@@ -1,0 +1,10 @@
+{
+  "$comment": "Per-sim build settings, read and validated by vite.config.ts. Unknown keys or bad values fail the build. See AGENTS.md → Compliance carve-outs (TrackLab keeps a forked vite.config.ts for OpenCV/video).",
+  "title": "Track Lab",
+  "shortName": "Track Lab",
+  "themeColor": "#1a1a2e",
+  "backgroundColor": "#000000",
+  "allowPermissions": ["camera", "microphone"],
+  "connectSrc": [],
+  "precacheExtensions": []
+}
