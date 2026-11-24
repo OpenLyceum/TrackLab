@@ -4,7 +4,7 @@
  */
 
 import type { ChartTransform, GridLineSet, LinePlot, TickLabelSet, TickMarkSet } from "scenerystack/bamboo";
-import { Range, Vector2 } from "scenerystack/dot";
+import { Range, roundSymmetric, Vector2 } from "scenerystack/dot";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 
 /**
@@ -325,7 +325,7 @@ export class GraphDataManager {
     // fall just under the cap).
     while (rangeLength / spacing > GraphDataManager.MAX_TICKS) {
       const decade = 10 ** Math.floor(Math.log10(spacing));
-      const step = Math.round(spacing / decade);
+      const step = roundSymmetric(spacing / decade);
       spacing = step < 2 ? 2 * decade : step < 5 ? 5 * decade : 10 * decade;
     }
 

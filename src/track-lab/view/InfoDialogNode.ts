@@ -10,6 +10,7 @@
  */
 
 import type { ReadOnlyProperty } from "scenerystack/axon";
+import { roundSymmetric } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
 import { FireListener, HBox, Line, Node, Path, Rectangle, RichText, Text, VBox } from "scenerystack/scenery";
 import { CloseButton, PhetFont } from "scenerystack/scenery-phet";
@@ -155,8 +156,8 @@ function tableIcon(): Node {
   const s = CONTROL_ICON_SIZE;
   const w = s - 2 * m;
   const h = s - 2 * m;
-  const headerH = Math.round(h / 3);
-  const midX = m + Math.round(w * 0.42);
+  const headerH = roundSymmetric(h / 3);
+  const midX = m + roundSymmetric(w * 0.42);
 
   return new Node({
     children: [
@@ -166,10 +167,16 @@ function tableIcon(): Node {
       new Rectangle(m, m, w, h, { stroke: gray, lineWidth: CONTROL_ICON_LINE_WIDTH_THIN, fill: null }),
       // horizontal dividers
       new Line(m, m + headerH, m + w, m + headerH, { stroke: gray, lineWidth: 0.5 }),
-      new Line(m, m + headerH + Math.round((h - headerH) / 2), m + w, m + headerH + Math.round((h - headerH) / 2), {
-        stroke: gray,
-        lineWidth: 0.5,
-      }),
+      new Line(
+        m,
+        m + headerH + roundSymmetric((h - headerH) / 2),
+        m + w,
+        m + headerH + roundSymmetric((h - headerH) / 2),
+        {
+          stroke: gray,
+          lineWidth: 0.5,
+        },
+      ),
       // vertical divider
       new Line(midX, m, midX, m + h, { stroke: gray, lineWidth: 0.5 }),
     ],

@@ -8,7 +8,7 @@
  */
 
 import { BooleanProperty, DerivedProperty, NumberProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
-import { Dimension2, Matrix3, Range, Vector2 } from "scenerystack/dot";
+import { Dimension2, Matrix3, Range, roundSymmetric, Vector2 } from "scenerystack/dot";
 import { VIDEO_HEIGHT, VIDEO_WIDTH } from "../../TrackLabConstants.js";
 import TrackLabNamespace from "../../TrackLabNamespace.js";
 
@@ -59,13 +59,13 @@ export class VideoPlaybackModel {
     (fps) => 1 / fps,
   );
 
-  // Derived current frame index: Math.round(currentTime * frameRate)
+  // Derived current frame index: roundSymmetric(currentTime * frameRate)
   // Multiply by frame rate directly rather than dividing by frameDuration
   // (1/fps) to avoid cascading floating-point error at non-integer fps values
   // like 29.97, which could cause adjacent timestamps to map to the same frame.
   public readonly currentFrameProperty: TReadOnlyProperty<number> = new DerivedProperty(
     [this.currentTimeProperty, this.frameRateProperty],
-    (time, fps) => Math.round(time * fps),
+    (time, fps) => roundSymmetric(time * fps),
   );
 
   // ── Actual display dimensions of the loaded video ─────────────────────
@@ -116,7 +116,7 @@ export class VideoPlaybackModel {
    * like 29.97.
    */
   public timeToFrame(time: number): number {
-    return Math.round(time * this.frameRateProperty.value);
+    return roundSymmetric(time * this.frameRateProperty.value);
   }
 
   /**

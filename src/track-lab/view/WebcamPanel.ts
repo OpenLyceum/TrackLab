@@ -7,6 +7,7 @@
 
 import type { NumberProperty } from "scenerystack/axon";
 import { Property } from "scenerystack/axon";
+import { roundSymmetric } from "scenerystack/dot";
 import { Shape } from "scenerystack/kite";
 import { type Color, DOM, HBox, Node, Path, Text, VBox } from "scenerystack/scenery";
 import { CloseButton, PhetFont, RefreshButton, StopIconShape } from "scenerystack/scenery-phet";
@@ -411,7 +412,7 @@ export class WebcamPanel extends Node {
       // Pass the pre-captured stream FPS if available
       if (streamFps && streamFps > 0) {
         this.fpsEstimate = {
-          fps: Math.round(streamFps),
+          fps: roundSymmetric(streamFps),
           confidence: "high",
           method: "stream settings",
         };
@@ -494,6 +495,7 @@ export class WebcamPanel extends Node {
   }
 
   private startTimer(): void {
+    // biome-ignore lint/plugin/no-native-timer: async host/hardware delay (not sim step)
     this.timerInterval = setInterval(() => {
       const secs = Math.floor((Date.now() - this.recordingStart) / TIMER_INTERVAL_MS);
       const m = Math.floor(secs / SECONDS_PER_MINUTE)

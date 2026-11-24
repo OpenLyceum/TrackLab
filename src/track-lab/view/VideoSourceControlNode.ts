@@ -7,7 +7,7 @@
 
 import type { NumberProperty, TProperty, TReadOnlyProperty } from "scenerystack/axon";
 import { Property } from "scenerystack/axon";
-import { Dimension2 } from "scenerystack/dot";
+import { Dimension2, roundSymmetric } from "scenerystack/dot";
 import { HBox, type Node, Path, Text } from "scenerystack/scenery";
 import { CameraButton, PhetFont } from "scenerystack/scenery-phet";
 import {
@@ -54,7 +54,7 @@ const LABEL_MAX_NAME_LENGTH = 25; // max chars before truncating upload filename
 // ── Label formatting helpers ─────────────────────────────────────────────────
 
 function formatDuration(seconds: number): string {
-  const totalSec = Math.round(seconds);
+  const totalSec = roundSymmetric(seconds);
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
@@ -213,6 +213,7 @@ export class VideoSourceControlNode extends HBox {
       // Revert section-header selections (defer to avoid Property reentry)
       if (value?.startsWith(HEADER_VALUE_PREFIX)) {
         const revertTo = this.lastLoadedValue;
+        // biome-ignore lint/plugin/no-native-timer: async host/hardware delay (not sim step)
         headerRevertTimeout = setTimeout(() => {
           headerRevertTimeout = null;
           selectedVideoProperty.value = revertTo;

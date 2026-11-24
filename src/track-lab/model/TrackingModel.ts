@@ -12,7 +12,7 @@
  */
 
 import { DerivedProperty, Property, type TReadOnlyProperty } from "scenerystack/axon";
-import { type Transform3, Vector2 } from "scenerystack/dot";
+import { roundSymmetric, type Transform3, Vector2 } from "scenerystack/dot";
 import { OpenCVTracker, type TrackerRegion } from "../../common/tracking/OpenCVTracker.js";
 import {
   MAX_TRACKS,
@@ -320,7 +320,7 @@ export class TrackingModel {
       // time, so this walks the track in time order — the first point to claim
       // an index is the earliest one.
       for (const pt of track.points) {
-        const frame = Math.round(pt.time * frameRate);
+        const frame = roundSymmetric(pt.time * frameRate);
         if (seen.has(frame)) {
           continue;
         }
@@ -336,7 +336,7 @@ export class TrackingModel {
     if (deleted) {
       this.lastDeletedPointProperty.value = {
         trackId: deleted.trackId,
-        point: { ...deleted.point, frame: Math.round(deleted.point.time * frameRate) },
+        point: { ...deleted.point, frame: roundSymmetric(deleted.point.time * frameRate) },
       };
     }
   }

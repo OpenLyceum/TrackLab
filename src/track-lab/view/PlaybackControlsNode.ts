@@ -6,7 +6,7 @@
  */
 
 import { DerivedProperty, EnumerationProperty } from "scenerystack/axon";
-import { Dimension2, Range, toFixed } from "scenerystack/dot";
+import { Dimension2, Range, roundSymmetric, toFixed } from "scenerystack/dot";
 import { HBox, HStrut, Node, Text, VBox } from "scenerystack/scenery";
 import { PhetFont, TimeControlNode, TimeSpeed } from "scenerystack/scenery-phet";
 import { HSlider } from "scenerystack/sun";
@@ -191,7 +191,7 @@ export class PlaybackControlsNode extends HBox {
 
       if (Number.isFinite(duration) && duration > 0 && frameRate > 0) {
         const knownCount = playback.totalFrameCountProperty.value;
-        const totalFrames = knownCount > 0 ? knownCount : Math.round(duration * frameRate);
+        const totalFrames = knownCount > 0 ? knownCount : roundSymmetric(duration * frameRate);
         const { majorInterval, minorInterval } = calculateTickInterval(totalFrames);
 
         // Add major ticks

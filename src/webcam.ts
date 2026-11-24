@@ -3,6 +3,7 @@
  * Handles MediaStream, MediaRecorder, and device enumeration.
  */
 
+import { roundSymmetric } from "scenerystack/dot";
 import TrackLabNamespace from "./TrackLabNamespace.js";
 
 /** Frame rate constraints for getUserMedia. */
@@ -60,6 +61,7 @@ function countWebmFrames(blob: Blob): Promise<{ frameCount: number; duration: nu
     let lastPresentedFrames = 0;
     let settled = false;
 
+    // biome-ignore lint/plugin/no-native-timer: async host/hardware delay (not sim step)
     const timeoutId = setTimeout(() => {
       if (!settled) {
         settled = true;
@@ -157,6 +159,7 @@ export function fixWebmDuration(blob: Blob): Promise<{ blob: Blob; duration: num
 
     // Start the timeout *before* assigning event handlers so the ID is
     // available inside the handlers through the closure.
+    // biome-ignore lint/plugin/no-native-timer: async host/hardware delay (not sim step)
     const timeoutId = setTimeout(() => {
       URL.revokeObjectURL(blobUrl);
       reject(new Error("Timeout while fixing video duration"));
@@ -487,7 +490,7 @@ export async function estimateVideoFrameRate(
     const streamFps = getFrameRateFromStream(stream);
     if (streamFps && streamFps > 0) {
       return {
-        fps: Math.round(streamFps),
+        fps: roundSymmetric(streamFps),
         confidence: "high",
         method: "stream settings",
       };
@@ -514,7 +517,7 @@ export async function estimateVideoFrameRate(
 
     // Determine confidence based on how close to common frame rates
     const commonRates = [15, 24, 25, 29.97, 30, 50, 60];
-    const roundedFps = Math.round(empiricalFps);
+    const roundedFps = roundSymmetric(empiricalFps);
     const closestCommon = commonRates.reduce((prev, curr) =>
       Math.abs(curr - empiricalFps) < Math.abs(prev - empiricalFps) ? curr : prev,
     );
