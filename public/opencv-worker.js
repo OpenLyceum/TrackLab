@@ -28,38 +28,28 @@ let cvLoadPromise = null;
 // tab is competing with other Chromium processes (fuzz, projector, etc.).
 const OPENCV_WASM_INIT_TIMEOUT_MS = 120_000;
 
-function _doLoadOpenCV() {
-  // importScripts is synchronous — it blocks this worker thread (not the main
-  // thread) until opencv.js is parsed and the Emscripten wrapper is set up.
+async function _doLoadOpenCV() {
+  // importScripts waits for the JS factory. OpenCV 5 exposes a promise for the WASM module.
   importScripts('./opencv.js');
+  if (!self.cv) {
+    throw new Error('cv not defined after importScripts');
+  }
 
-  return new Promise((resolve, reject) => {
-    const raw = self.cv;
-    if (!raw) {
-      reject(new Error('cv not defined after importScripts'));
-      return;
+  let timer;
+  try {
+    const module = await Promise.race([
+      self.cv,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('OpenCV WASM initialisation timed out')), OPENCV_WASM_INIT_TIMEOUT_MS);
+      }),
+    ]);
+    if (typeof module.Mat !== 'function') {
+      throw new Error('OpenCV did not initialise correctly');
     }
-    // Already fully initialised (Mat constructor available).
-    if (typeof raw.Mat === 'function') {
-      cv = raw;
-      resolve(undefined);
-      return;
-    }
-    // Wait for the Emscripten WASM initialisation callback.
-    const timer = setTimeout(
-      () => reject(new Error('OpenCV WASM initialisation timed out')),
-      OPENCV_WASM_INIT_TIMEOUT_MS,
-    );
-    raw.onRuntimeInitialized = () => {
-      clearTimeout(timer);
-      if (typeof raw.Mat === 'function') {
-        cv = raw;
-        resolve(undefined);
-      } else {
-        reject(new Error('OpenCV did not initialise correctly'));
-      }
-    };
-  });
+    cv = module;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function ensureOpenCV() {

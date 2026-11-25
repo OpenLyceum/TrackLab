@@ -6,14 +6,12 @@ import type { Plugin, Rolldown, ViteDevServer } from "vite";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import packageJson from "./package.json" with { type: "json" };
+import { pwaOptions, simMetadataHtml } from "./scripts/pwa-config.js";
 import simConfigJson from "./sim.config.json" with { type: "json" };
-
-const { description, name }: { description: string; name: string } = packageJson;
 
 /**
  * TrackLab carve-out of the template's vite.config.ts (see AGENTS.md).
- * Kept in step with SceneryStackTemplate for sim.config validation, CSP meta,
- * onBundlerLog, and the PWA block. Deltas: OpenCV/video plugins, WASM/blob CSP,
+ * Shares the template PWA options. Deltas: OpenCV/video plugins, WASM/blob CSP,
  * and Workbox globIgnores/runtimeCaching. No `--mode single` (OpenCV + videos
  * cannot collapse into one HTML file).
  */
@@ -30,6 +28,7 @@ type SimConfig = {
   connectSrc: string[];
   /** Extra file extensions (no dot) for the Workbox precache, e.g. bundled audio. */
   precacheExtensions: string[];
+  pwaId?: string;
 };
 
 const PERMISSION_FEATURES = ["camera", "microphone", "geolocation"] as const;
@@ -44,6 +43,7 @@ const SIM_CONFIG_KEYS: ReadonlySet<string> = new Set([
   "allowPermissions",
   "connectSrc",
   "precacheExtensions",
+  "pwaId",
 ]);
 
 /** Validate `sim.config.json` strictly so a typo or an invented key fails the build instead of being ignored. */
@@ -84,6 +84,9 @@ function parseSimConfig(raw: Record<string, unknown>): SimConfig {
     connectSrc: list("connectSrc", /^https:\/\/[a-z0-9.-]+(?::\d+)?$/, "bare https:// origins (no path, no wildcard)"),
     precacheExtensions: list("precacheExtensions", /^[a-z0-9]{1,8}$/, "lowercase extensions without a dot"),
   };
+  if (raw["pwaId"] !== undefined) {
+    config.pwaId = text("pwaId", /^\/?[a-z0-9][a-z0-9._-]*$/i, "the existing app ID or its root-relative path");
+  }
   if (problems.length > 0) {
     throw new Error(`sim.config.json is invalid:\n  - ${problems.join("\n  - ")}`);
   }
@@ -168,25 +171,6 @@ const securityHeaders: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
 };
-
-/** Workbox precache ceiling — SceneryStack bundles exceed the default 2 MB limit. */
-const WORKBOX_MAX_FILE_BYTES = 12 * 1024 * 1024;
-
-/**
- * Fill `%SIM_DESCRIPTION%` in index.html from package.json, so the page meta tags,
- * the PWA manifest and package.json can never disagree. Runs before Vite's own
- * `%ENV%` replacement (order: "pre").
- */
-function simMetadataHtml(): Plugin {
-  const escaped = description.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-  return {
-    name: "sim-metadata-html",
-    transformIndexHtml: {
-      order: "pre",
-      handler: (html: string): string => html.replaceAll("%SIM_DESCRIPTION%", escaped),
-    },
-  };
-}
 
 /**
  * Write the CSP into the built `index.html` as the first `<head>` element, so the
@@ -374,89 +358,25 @@ export default defineConfig({
     headers: securityHeaders,
   },
   plugins: [
-    simMetadataHtml(),
+    simMetadataHtml(packageJson.description, simConfig.themeColor),
     cspMetaTag(),
     serveVideos(),
     serveOpenCV(),
-    VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "icons/apple-touch-icon.png"],
-      manifest: {
-        id: name,
-        name: simConfig.title,
-        // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-        short_name: simConfig.shortName,
-        description,
-        categories: ["education", "science"],
-        // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-        theme_color: simConfig.themeColor,
-        // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-        background_color: simConfig.backgroundColor,
-        display: "standalone",
-        // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-        display_override: ["window-controls-overlay", "standalone"],
-        // No `orientation` — leave free so portrait-friendly sims are not forced landscape.
-        icons: [
-          {
-            src: "icons/icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "icons/icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "icons/icon.svg",
-            sizes: "any",
-            type: "image/svg+xml",
-            purpose: "maskable",
-          },
-        ],
-        // Placeholder shots from `npm run icons`; replace with real sim screenshots before shipping.
-        screenshots: [
-          {
-            src: "screenshots/wide.png",
-            sizes: "1280x720",
-            type: "image/png",
-            // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-            form_factor: "wide",
-            label: simConfig.title,
-          },
-          {
-            src: "screenshots/narrow.png",
-            sizes: "720x1280",
-            type: "image/png",
-            // biome-ignore lint/style/useNamingConvention: Web App Manifest spec requires snake_case keys
-            form_factor: "narrow",
-            label: simConfig.title,
-          },
-        ],
-      },
-      workbox: {
-        maximumFileSizeToCacheInBytes: WORKBOX_MAX_FILE_BYTES,
-        // Lets <Pages URL>/<Repo>-single.html reach returning visitors if a single-file
-        // build is ever published alongside this one (TrackLab has no build:single).
-        navigateFallbackDenylist: [/-single\.html$/],
-        globPatterns: [
-          `**/*.{${["js", "css", "html", "svg", "png", "woff2", ...simConfig.precacheExtensions].join(",")}}`,
-        ],
-        // opencv.js (≈11 MB) is loaded on-demand; skip precaching to speed up
-        // the initial service-worker install. It is still cached at runtime by
-        // the CacheFirst runtimeCaching entry below (matched by the *.js pattern).
+    VitePWA(
+      pwaOptions(simConfig, packageJson, {
         globIgnores: ["opencv.js"],
         runtimeCaching: [
           {
-            urlPattern: /\.(?:js|css)$/,
-            handler: "CacheFirst",
+            urlPattern: ({ url, sameOrigin, request }: { url: URL; sameOrigin: boolean; request: Request }) =>
+              sameOrigin && request.destination === "script" && url.href === new URL("opencv.js", location.href).href,
+            handler: "NetworkFirst",
             options: {
-              cacheName: "assets",
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheName: "tracklab-opencv",
+              expiration: { maxEntries: 1, maxAgeSeconds: 30 * 24 * 60 * 60 },
             },
           },
         ],
-      },
-    }),
+      }),
+    ),
   ],
 });
